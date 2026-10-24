@@ -8,6 +8,7 @@ import { useStudio } from "../lib/store";
 import { api, type FileNode } from "../lib/api";
 import { useContextMenu } from "./ContextMenu";
 import { copyText } from "../lib/clipboard";
+import { useI18n } from "../lib/i18n";
 import type { MouseEvent as ReactMouseEvent } from "react";
 
 function fileIcon(name: string) {
@@ -24,6 +25,7 @@ function fileIcon(name: string) {
 function TreeNode({ node, depth }: { node: FileNode; depth: number }) {
   const s = useStudio();
   const ctx = useContextMenu();
+  const { t } = useI18n();
   const [open, setOpen] = useState(depth < 2);
   const isActive = s.activePath === node.path;
   const isOpenFile = s.openFiles.some((f) => f.path === node.path);
@@ -33,39 +35,39 @@ function TreeNode({ node, depth }: { node: FileNode; depth: number }) {
     const items = node.is_dir
       ? [
           {
-            label: "New File",
+            label: t("common.newFile"),
             icon: <FilePlus2 size={12} />,
             action: () => {
-              const n = prompt("File name:");
+              const n = prompt(t("tree.fileNamePrompt"));
               if (n) void s.newFile(node.path, n);
             },
           },
           {
-            label: "New Directory",
+            label: t("common.newDirectory"),
             icon: <FolderPlus size={12} />,
             action: () => {
-              const n = prompt("Directory name:");
+              const n = prompt(t("tree.dirNamePrompt"));
               if (n) void api.createDirectory(node.path + "/" + n).then(() => s.refreshTree());
             },
           },
           { separator: true as const },
         ]
       : [
-          { label: "Open", icon: <FileCode size={12} />, action: () => void s.openFile(node.path) },
+          { label: t("common.open"), icon: <FileCode size={12} />, action: () => void s.openFile(node.path) },
           { separator: true as const },
         ];
 
     ctx.open(e, [
       ...items,
-      { label: "Copy Path", icon: <ClipboardCopy size={12} />, action: () => void copyText(node.path) },
-      { label: "Reload", icon: <RefreshCw size={12} />, action: () => s.refreshTree() },
+      { label: t("common.copyPath"), icon: <ClipboardCopy size={12} />, action: () => void copyText(node.path) },
+      { label: t("common.reload"), icon: <RefreshCw size={12} />, action: () => s.refreshTree() },
       { separator: true },
       {
-        label: "Delete",
+        label: t("common.delete"),
         icon: <Trash2 size={12} />,
         danger: true,
         action: () => {
-          if (confirm(`Delete ${node.path}?`)) void s.deleteFile(node.path);
+          if (confirm(t("tree.deleteConfirm", { path: node.path }))) void s.deleteFile(node.path);
         },
       },
     ]);
@@ -108,18 +110,19 @@ function TreeNode({ node, depth }: { node: FileNode; depth: number }) {
 
 export default function ProjectTree() {
   const s = useStudio();
-  if (!s.tree) return <div className="p-3 text-2xs text-darcula-dim">No project open</div>;
+  const { t } = useI18n();
+  if (!s.tree) return <div className="p-3 text-2xs text-darcula-dim">{t("tree.noProject")}</div>;
   return (
     <div className="h-full flex flex-col bg-darcula-editor">
       <div className="flex items-center h-7 px-2 border-b border-black/40 text-2xs text-darcula-text shrink-0">
-        <span className="font-semibold">Project</span>
+        <span className="font-semibold">{t("tree.title")}</span>
         <span className="mx-1.5 text-darcula-dim">|</span>
-        <span className="text-darcula-dim">Mini App</span>
+        <span className="text-darcula-dim">{t("tree.subtitle")}</span>
         <div className="flex-1" />
-        <button className="p-1 hover:bg-white/10 rounded" title="Collapse All" onClick={() => location.reload()}>
+        <button className="p-1 hover:bg-white/10 rounded" title={t("tree.collapseAll")} onClick={() => location.reload()}>
           <ChevronRight size={12} className="text-darcula-dim" />
         </button>
-        <button className="p-1 hover:bg-white/10 rounded" title="Refresh" onClick={() => s.refreshTree()}>
+        <button className="p-1 hover:bg-white/10 rounded" title={t("tree.refresh")} onClick={() => s.refreshTree()}>
           <RefreshCw size={12} className="text-darcula-dim" />
         </button>
       </div>

@@ -2,9 +2,11 @@ import { useEffect, useState } from "react";
 import { X, Save } from "lucide-react";
 import { useStudio } from "../lib/store";
 import { ALL_PERMISSIONS } from "../lib/api";
+import { useI18n } from "../lib/i18n";
 
 export default function ManifestPanel({ onClose }: { onClose: () => void }) {
   const s = useStudio();
+  const { t } = useI18n();
   const p = s.project;
   const [name, setName] = useState("");
   const [appId, setAppId] = useState("");
@@ -32,29 +34,29 @@ export default function ManifestPanel({ onClose }: { onClose: () => void }) {
   return (
     <div className="h-full flex flex-col bg-darcula-editor border-l border-black/40">
       <div className="flex items-center h-7 px-2 border-b border-black/40 text-2xs shrink-0">
-        <span className="font-semibold text-darcula-text">Mini App Manifest</span>
+        <span className="font-semibold text-darcula-text">{t("manifest.title")}</span>
         <div className="flex-1" />
         <button className="p-1 hover:bg-white/10 rounded" onClick={onClose}><X size={12} className="text-darcula-dim" /></button>
       </div>
       <div className="flex-1 overflow-auto p-3 space-y-3 text-2xs">
         <div>
-          <div className="text-darcula-dim mb-1">App name</div>
+          <div className="text-darcula-dim mb-1">{t("manifest.appName")}</div>
           <input className="w-full bg-darcula-panel border border-white/10 rounded px-2 py-1.5 text-darcula-text outline-none focus:border-darcula-accent" value={name} onChange={(e) => setName(e.target.value)} />
         </div>
         <div>
-          <div className="text-darcula-dim mb-1">App ID</div>
+          <div className="text-darcula-dim mb-1">{t("manifest.appId")}</div>
           <input className="w-full bg-darcula-panel border border-white/10 rounded px-2 py-1.5 font-mono text-darcula-accent outline-none focus:border-darcula-accent" value={appId} onChange={(e) => setAppId(e.target.value)} />
         </div>
         <div>
-          <div className="text-darcula-dim mb-1">Version</div>
+          <div className="text-darcula-dim mb-1">{t("manifest.version")}</div>
           <input className="w-full bg-darcula-panel border border-white/10 rounded px-2 py-1.5 font-mono text-darcula-text outline-none focus:border-darcula-accent" value={version} onChange={(e) => setVersion(e.target.value)} />
         </div>
         <div>
-          <div className="text-darcula-dim mb-1">Description</div>
+          <div className="text-darcula-dim mb-1">{t("manifest.description")}</div>
           <textarea className="w-full bg-darcula-panel border border-white/10 rounded px-2 py-1.5 text-darcula-text outline-none focus:border-darcula-accent resize-none" rows={2} value={description} onChange={(e) => setDescription(e.target.value)} />
         </div>
         <div>
-          <div className="text-darcula-dim mb-1.5">Permissions</div>
+          <div className="text-darcula-dim mb-1.5">{t("manifest.permissions")}</div>
           <div className="space-y-1">
             {ALL_PERMISSIONS.map((perm) => (
               <label key={perm.id} className="flex items-center gap-2 cursor-pointer hover:text-white">
@@ -69,10 +71,10 @@ export default function ManifestPanel({ onClose }: { onClose: () => void }) {
           onClick={() => s.updateManifest({ name, app_id: appId, version, description, permissions })}
           className="w-full flex items-center justify-center gap-2 py-2 rounded bg-darcula-green hover:bg-emerald-600 disabled:opacity-30 text-white font-medium"
         >
-          <Save size={13} /> Apply to qchat.manifest.json
+          <Save size={13} /> {t("manifest.apply")}
         </button>
         <div className="text-darcula-dim/70 leading-relaxed">
-          Edits are written to <span className="font-mono text-darcula-accent">qchat.manifest.json</span>. The ZIP packager validates appId and version at build time.
+          {t("manifest.note")}
         </div>
       </div>
     </div>

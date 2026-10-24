@@ -4,6 +4,7 @@ import {
 } from "lucide-react";
 import { useStudio } from "./lib/store";
 import { api } from "./lib/api";
+import { useI18n } from "./lib/i18n";
 import TopBar from "./components/TopBar";
 import TitleBar from "./components/TitleBar";
 import ProjectTree from "./components/ProjectTree";
@@ -16,6 +17,7 @@ import ManifestPanel from "./components/ManifestPanel";
 
 export default function App() {
   const s = useStudio();
+  const { t } = useI18n();
   const [leftW, setLeftW] = useState(240);
   const [rightW, setRightW] = useState(260);
   const [bottomH, setBottomH] = useState(230);
@@ -83,14 +85,14 @@ export default function App() {
       <div className="flex-1 flex min-h-0">
         {/* Left tool strip */}
         <div className="w-7 bg-darcula-panel border-r border-black/40 flex flex-col items-center py-1 gap-0.5 shrink-0">
-          {stripIcon(FolderTree, true, "Project", () => {})}
-          {stripIcon(Braces, false, "Structure", () => s.showToast("Structure view coming soon"))}
-          {stripIcon(GitBranch, false, "Git", () => s.showToast("Git integration coming soon"))}
+          {stripIcon(FolderTree, true, t("tree.title"), () => {})}
+          {stripIcon(Braces, false, t("strip.structure"), () => s.showToast(t("toast.structureSoon")))}
+          {stripIcon(GitBranch, false, "Git", () => s.showToast(t("toast.gitSoon")))}
           <div className="flex-1" />
-          {stripIcon(Hammer, bottomVisible && s.bottomTab === "build", "Build", () => { setBottomVisible(true); s.setBottomTab("build"); })}
-          {stripIcon(Smartphone, bottomVisible && s.bottomTab === "preview", "Preview", () => { setBottomVisible(true); s.setBottomTab("preview"); if (!s.previewUrl) s.runPreview(); })}
+          {stripIcon(Hammer, bottomVisible && s.bottomTab === "build", t("bottom.tab.build"), () => { setBottomVisible(true); s.setBottomTab("build"); })}
+          {stripIcon(Smartphone, bottomVisible && s.bottomTab === "preview", t("bottom.tab.preview"), () => { setBottomVisible(true); s.setBottomTab("preview"); if (!s.previewUrl) s.runPreview(); })}
           <button
-            title={bottomVisible ? "Hide tool window" : "Show tool window"}
+            title={bottomVisible ? t("strip.hideTools") : t("strip.showTools")}
             onClick={() => setBottomVisible((v) => !v)}
             className="w-7 h-7 grid place-items-center text-darcula-dim hover:text-white"
           >
@@ -141,7 +143,7 @@ export default function App() {
           <button
             className="w-6 bg-darcula-panel border-l border-black/40 text-darcula-dim hover:text-white text-2xs [writing-mode:vertical-rl] flex items-center justify-center gap-2"
             onClick={() => setRightVisible(true)}
-            title="Show Manifest"
+            title={t("manifest.show")}
           >
             <Braces size={12} /> Manifest
           </button>

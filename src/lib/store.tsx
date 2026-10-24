@@ -12,6 +12,7 @@ import {
   type ProjectInfo,
   type RecentProject,
 } from "./api";
+import { useI18n } from "./i18n";
 
 export type OpenFile = {
   path: string;
@@ -119,6 +120,13 @@ export function StudioProvider({ children }: { children: React.ReactNode }) {
   const [uiScale, setUiScale] = useState(readStoredScale);
   const toastTimer = useRef<number | null>(null);
 
+  // `t` with a stable identity (reads the current language through a ref), so the
+  // callbacks / subscriptions below are not recreated every time the language changes.
+  const { t: tCurrent } = useI18n();
+  const tRef = useRef(tCurrent);
+  tRef.current = tCurrent;
+  const t = useCallback<typeof tCurrent>((key, vars) => tRef.current(key, vars), []);
+
   // Apply + persist the UI zoom. `--ui-scale` is consumed by `html` in index.css.
   useEffect(() => {
     document.documentElement.style.setProperty("--ui-scale", String(uiScale));
@@ -171,13 +179,13 @@ export function StudioProvider({ children }: { children: React.ReactNode }) {
       setBuildRunning(false);
       setBuildResult(r);
       setBottomTab("build");
-      showToast(r.success ? "Build succeeded" : "Build failed");
+      showToast(t(r.success ? "toast.buildSucceeded" : "toast.buildFailed"));
     }).then((u) => (undone = u));
     return () => {
       unlog?.();
       undone?.();
     };
-  }, [loadRecent, showToast]);
+  }, [loadRecent, showToast, t]);
 
   const refreshTree = useCallback(() => {
     if (!project) return;
@@ -202,13 +210,13 @@ export function StudioProvider({ children }: { children: React.ReactNode }) {
         const appPath = path + "/src/App.tsx";
         await openFilePath(manifestPath);
         await openFilePath(appPath);
-        showToast(`Opened ${info.name}`);
+        showToast(t("toast.opened", { name: info.name }));
       } catch (e) {
         showToast(String(e));
       }
     },
     // eslint-disable-next-line react-hooks/exhaustive-deps
-    [loadRecent, showToast],
+    [loadRecent, showToast, t],
   );
 
   const openFilePath = useCallback(async (path: string) => {
@@ -289,9 +297,9 @@ export function StudioProvider({ children }: { children: React.ReactNode }) {
         // reload project info
         if (project) api.openProject(project.path).then(setProject).catch(() => {});
       }
-      showToast("File saved");
+      showToast(t("toast.fileSaved"));
     },
-    [openFiles, project, showToast],
+    [openFiles, project, showToast, t],
   );
 
   const saveAll = useCallback(async () => {
@@ -299,8 +307,8 @@ export function StudioProvider({ children }: { children: React.ReactNode }) {
       if (f.dirty) await api.writeFile(f.path, f.content);
     }
     setOpenFiles((prev) => prev.map((x) => ({ ...x, dirty: false })));
-    showToast("All files saved");
-  }, [openFiles, showToast]);
+    showToast(t("toast.allSaved"));
+  }, [openFiles, showToast, t]);
 
   const clearBuildLogs = useCallback(() => {
     setBuildLogs([]);
@@ -328,11 +336,11 @@ export function StudioProvider({ children }: { children: React.ReactNode }) {
       const url = await api.startPreview(project.path);
       setPreviewUrl(url + "?t=" + Date.now());
       setBottomTab("preview");
-      showToast("Preview started");
+      showToast(t("toast.previewStarted"));
     } catch (e) {
       showToast(String(e));
     }
-  }, [project, showToast]);
+  }, [project, showToast, t]);
 
   const deleteFile = useCallback(
     async (path: string) => {
@@ -374,9 +382,9 @@ export function StudioProvider({ children }: { children: React.ReactNode }) {
       );
       const info = await api.openProject(project.path);
       setProject(info);
-      showToast("Manifest updated");
+      showToast(t("toast.manifestUpdated"));
     },
-    [project, showToast],
+    [project, showToast, t],
   );
 
   const value: StudioState = {

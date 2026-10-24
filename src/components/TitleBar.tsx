@@ -1,8 +1,9 @@
 import { useEffect, type MouseEvent as ReactMouseEvent } from "react";
-import { Minus, X, Square, ZoomIn, ZoomOut } from "lucide-react";
+import { Minus, X, Square, ZoomIn, ZoomOut, Languages, Check } from "lucide-react";
 import { useStudio } from "../lib/store";
 import { isInteractive, warmWindow, winAction } from "../lib/window";
 import { useContextMenu } from "./ContextMenu";
+import { LANGS, useI18n } from "../lib/i18n";
 import logo from "../assets/logo.png";
 
 /**
@@ -15,6 +16,7 @@ import logo from "../assets/logo.png";
 export default function TitleBar({ title }: { title?: string }) {
   const s = useStudio();
   const ctx = useContextMenu();
+  const { t, lang, setLang } = useI18n();
 
   // Warm the window handle so the first title-bar drag reacts immediately.
   useEffect(() => {
@@ -37,17 +39,30 @@ export default function TitleBar({ title }: { title?: string }) {
     void winAction("toggleMaximize");
   };
 
+  /** Language picker: reuses the app-wide context menu, anchored under the button. */
+  const openLangMenu = (e: ReactMouseEvent<HTMLButtonElement>) => {
+    const r = e.currentTarget.getBoundingClientRect();
+    ctx.open(
+      { clientX: r.left, clientY: r.bottom + 2 },
+      LANGS.map((l) => ({
+        label: l.label,
+        icon: lang === l.id ? <Check size={12} /> : <span className="inline-block w-3" />,
+        action: () => setLang(l.id),
+      })),
+    );
+  };
+
   /** Frameless window: right-clicking the frame offers the window commands. */
   const onContextMenu = (e: ReactMouseEvent<HTMLDivElement>) => {
     ctx.open(e, [
-      { label: "Minimize", icon: <Minus size={12} />, action: () => void winAction("minimize") },
-      { label: "Maximize / Restore", icon: <Square size={11} />, action: () => void winAction("toggleMaximize") },
+      { label: t("common.minimize"), icon: <Minus size={12} />, action: () => void winAction("minimize") },
+      { label: t("common.maximize"), icon: <Square size={11} />, action: () => void winAction("toggleMaximize") },
       { separator: true },
-      { label: "Zoom In", icon: <ZoomIn size={12} />, disabled: s.uiScale >= 1.8, action: s.zoomIn },
-      { label: "Zoom Out", icon: <ZoomOut size={12} />, disabled: s.uiScale <= 0.85, action: s.zoomOut },
-      { label: "Reset Zoom", shortcut: "Ctrl+0", action: s.resetZoom },
+      { label: t("common.zoomIn"), icon: <ZoomIn size={12} />, disabled: s.uiScale >= 1.8, action: s.zoomIn },
+      { label: t("common.zoomOut"), icon: <ZoomOut size={12} />, disabled: s.uiScale <= 0.85, action: s.zoomOut },
+      { label: t("common.resetZoom"), shortcut: "Ctrl+0", action: s.resetZoom },
       { separator: true },
-      { label: "Close", icon: <X size={12} />, danger: true, action: () => void winAction("close") },
+      { label: t("common.close"), icon: <X size={12} />, danger: true, action: () => void winAction("close") },
     ]);
   };
 
@@ -59,24 +74,33 @@ export default function TitleBar({ title }: { title?: string }) {
       onContextMenu={onContextMenu}
     >
       <div className="no-drag flex items-center gap-2 w-48">
-        <img src={logo} alt="QChat Mini App Studio" className="w-5 h-5 rounded-md object-cover" />
-        <span className="text-darcula-text font-medium">QChat Mini App Studio</span>
+        <img src={logo} alt={t("app.title")} className="w-5 h-5 rounded-md object-cover" />
+        <span className="text-darcula-text font-medium">{t("app.title")}</span>
       </div>
 
-      <div className="flex-1 text-center truncate px-4">{title ?? "QChat Mini App Studio"}</div>
+      <div className="flex-1 text-center truncate px-4">{title ?? t("app.title")}</div>
 
       <div className="no-drag flex items-center gap-1">
         <button
+          onClick={openLangMenu}
+          title={t("common.language")}
+          className="flex items-center gap-1 px-1.5 py-1 rounded hover:bg-white/10 hover:text-white"
+        >
+          <Languages size={13} />
+          <span className="text-[0.625rem] font-medium">{LANGS.find((l) => l.id === lang)?.short}</span>
+        </button>
+        <div className="w-px h-4 bg-white/10 mx-1" />
+        <button
           onClick={s.zoomOut}
           disabled={s.uiScale <= 0.85}
-          title="Thu nhỏ giao diện (Ctrl+-)"
+          title={`${t("common.zoomOut")} (Ctrl+-)`}
           className="p-1 rounded hover:bg-white/10 disabled:opacity-40"
         >
           <ZoomOut size={13} />
         </button>
         <button
           onClick={s.resetZoom}
-          title="Cỡ giao diện mặc định (Ctrl+0)"
+          title={`${t("common.resetZoom")} (Ctrl+0)`}
           className="w-9 text-[0.625rem] tabular-nums hover:text-white"
         >
           {Math.round(s.uiScale * 100)}%
@@ -84,7 +108,7 @@ export default function TitleBar({ title }: { title?: string }) {
         <button
           onClick={s.zoomIn}
           disabled={s.uiScale >= 1.8}
-          title="Phóng to giao diện (Ctrl+=)"
+          title={`${t("common.zoomIn")} (Ctrl+=)`}
           className="p-1 rounded hover:bg-white/10 disabled:opacity-40"
         >
           <ZoomIn size={13} />
@@ -94,21 +118,21 @@ export default function TitleBar({ title }: { title?: string }) {
 
         <button
           onClick={() => winAction("minimize")}
-          title="Thu nhỏ"
+          title={t("common.minimize")}
           className="p-1.5 hover:bg-white/10 rounded"
         >
           <Minus size={14} />
         </button>
         <button
           onClick={() => winAction("toggleMaximize")}
-          title="Phóng to / khôi phục"
+          title={t("common.maximize")}
           className="p-1.5 hover:bg-white/10 rounded"
         >
           <Square size={12} />
         </button>
         <button
           onClick={() => winAction("close")}
-          title="Đóng"
+          title={t("common.close")}
           className="p-1.5 hover:bg-red-500/80 hover:text-white rounded"
         >
           <X size={14} />

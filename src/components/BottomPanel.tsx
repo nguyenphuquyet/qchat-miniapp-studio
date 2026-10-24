@@ -7,18 +7,20 @@ import { useStudio } from "../lib/store";
 import type { BottomTab } from "../lib/store";
 import { useContextMenu } from "./ContextMenu";
 import { copyText } from "../lib/clipboard";
+import { useI18n, type I18nKey } from "../lib/i18n";
 import type { MouseEvent as ReactMouseEvent } from "react";
 
-const TABS: { id: BottomTab; label: string; icon: any }[] = [
-  { id: "build", label: "Build", icon: Hammer },
-  { id: "run", label: "Run", icon: Play },
-  { id: "preview", label: "Preview", icon: Smartphone },
-  { id: "terminal", label: "Terminal", icon: TerminalSquare },
+const TABS: { id: BottomTab; labelKey: I18nKey; icon: any }[] = [
+  { id: "build", labelKey: "bottom.tab.build", icon: Hammer },
+  { id: "run", labelKey: "bottom.tab.run", icon: Play },
+  { id: "preview", labelKey: "bottom.tab.preview", icon: Smartphone },
+  { id: "terminal", labelKey: "bottom.tab.terminal", icon: TerminalSquare },
 ];
 
 export default function BottomPanel({ onHide }: { onHide: () => void }) {
   const s = useStudio();
   const ctx = useContextMenu();
+  const { t } = useI18n();
   const logRef = useRef<HTMLDivElement>(null);
   const [phoneScale, setPhoneScale] = useState(1);
 
@@ -30,20 +32,20 @@ export default function BottomPanel({ onHide }: { onHide: () => void }) {
   const onLogContextMenu = (e: ReactMouseEvent) => {
     ctx.open(e, [
       {
-        label: "Copy Log",
+        label: t("common.copyLog"),
         icon: <ClipboardCopy size={12} />,
         disabled: s.buildLogs.length === 0,
         action: () => void copyText(s.buildLogs.map((l) => l.line).join("\n")),
       },
       {
-        label: "Clear Log",
+        label: t("common.clearLog"),
         icon: <Eraser size={12} />,
         disabled: s.buildLogs.length === 0 && !s.buildResult,
         action: s.clearBuildLogs,
       },
       { separator: true },
       {
-        label: "Run Build",
+        label: t("common.runBuild"),
         icon: <Hammer size={12} />,
         disabled: !s.project || s.buildRunning,
         action: () => void s.runBuild(),
@@ -54,31 +56,31 @@ export default function BottomPanel({ onHide }: { onHide: () => void }) {
   return (
     <div className="h-full flex flex-col bg-darcula-panel border-t border-black/40">
       <div className="flex items-center h-7 px-1 border-b border-black/30 shrink-0">
-        {TABS.map((t) => (
+        {TABS.map((tab) => (
           <button
-            key={t.id}
-            onClick={() => s.setBottomTab(t.id)}
+            key={tab.id}
+            onClick={() => s.setBottomTab(tab.id)}
             className={`flex items-center gap-1.5 px-3 h-7 text-2xs border-b-2 ${
-              s.bottomTab === t.id
+              s.bottomTab === tab.id
                 ? "text-white border-darcula-modified"
                 : "text-darcula-dim border-transparent hover:text-darcula-text"
             }`}
           >
-            <t.icon size={12} />
-            {t.label}
-            {t.id === "build" && s.buildRunning && <Loader2 size={11} className="animate-spin text-darcula-accent" />}
-            {t.id === "build" && !s.buildRunning && s.buildResult?.success && <CheckCircle2 size={11} className="text-darcula-green" />}
-            {t.id === "build" && !s.buildRunning && s.buildResult && !s.buildResult.success && <XCircle size={11} className="text-darcula-red" />}
+            <tab.icon size={12} />
+            {t(tab.labelKey)}
+            {tab.id === "build" && s.buildRunning && <Loader2 size={11} className="animate-spin text-darcula-accent" />}
+            {tab.id === "build" && !s.buildRunning && s.buildResult?.success && <CheckCircle2 size={11} className="text-darcula-green" />}
+            {tab.id === "build" && !s.buildRunning && s.buildResult && !s.buildResult.success && <XCircle size={11} className="text-darcula-red" />}
           </button>
         ))}
         <div className="flex-1" />
         {s.buildResult?.zip_path && (
           <span className="flex items-center gap-1 text-2xs text-darcula-green mr-2">
             <Package size={12} />
-            <span className="max-w-[240px] truncate">{s.buildResult.zip_path.split(/[\\/]/).pop()}</span>
+            <span className="max-w-[240px] truncate">{t("bottom.package", { path: s.buildResult.zip_path.split(/[\\/]/).pop() ?? "" })}</span>
           </span>
         )}
-        <button className="p-1 hover:bg-white/10 rounded" onClick={onHide} title="Hide">
+        <button className="p-1 hover:bg-white/10 rounded" onClick={onHide} title={t("common.hide")}>
           <ChevronUp size={13} className="text-darcula-dim" />
         </button>
       </div>
@@ -87,7 +89,7 @@ export default function BottomPanel({ onHide }: { onHide: () => void }) {
         {s.bottomTab === "build" && (
           <div ref={logRef} className="h-full overflow-auto p-2 font-mono text-2xs leading-relaxed" onContextMenu={onLogContextMenu}>
             {s.buildLogs.length === 0 && !s.buildRunning && (
-              <div className="text-darcula-dim">Build output will appear here. Click <span className="text-darcula-green">Run</span> or <span className="text-darcula-accent">Build</span> to package the Mini App ZIP.</div>
+              <div className="text-darcula-dim">{t("bottom.buildHint")}</div>
             )}
             {s.buildLogs.map((l, i) => (
               <div
@@ -105,13 +107,13 @@ export default function BottomPanel({ onHide }: { onHide: () => void }) {
             ))}
             {s.buildRunning && (
               <div className="flex items-center gap-2 text-darcula-accent mt-1">
-                <Loader2 size={12} className="animate-spin" /> Building…
+                <Loader2 size={12} className="animate-spin" /> {t("bottom.building")}
               </div>
             )}
             {s.buildResult && (
               <div className={`mt-2 flex items-center gap-2 font-semibold ${s.buildResult.success ? "text-darcula-green" : "text-darcula-red"}`}>
                 {s.buildResult.success ? <CheckCircle2 size={14} /> : <XCircle size={14} />}
-                {s.buildResult.message}
+                {t(s.buildResult.success ? "bottom.buildSucceeded" : "bottom.buildFailed")}
               </div>
             )}
           </div>
@@ -119,20 +121,15 @@ export default function BottomPanel({ onHide }: { onHide: () => void }) {
 
         {s.bottomTab === "run" && (
           <div className="p-3 text-2xs text-darcula-dim font-mono">
-            <div className="text-darcula-green">$ npm run dev (vite dev server — coming soon)</div>
-            <div className="mt-1">Use the <span className="text-darcula-accent">Preview</span> tab to run the built Mini App inside a simulated QChat WebView.</div>
+            <div className="text-darcula-green">$ npm run dev</div>
+            <div className="mt-1">{t("bottom.runHint")}</div>
           </div>
         )}
 
         {s.bottomTab === "terminal" && (
           <div className="p-3 text-2xs text-darcula-text font-mono" onContextMenu={onLogContextMenu}>
             <div><span className="text-darcula-green">user@qchat-studio</span>:<span className="text-darcula-accent">~/project</span>$ _</div>
-            <div className="text-darcula-dim mt-2">
-              Build and preview commands run <span className="text-darcula-accent">inside the app / in the background</span> —
-              no external console window is opened. Everything they print streams into the{" "}
-              <span className="text-darcula-accent">Build</span> tab, and the studio uses its bundled Node.js runtime
-              when one is shipped with the installer.
-            </div>
+            <div className="text-darcula-dim mt-2">{t("bottom.terminalHint")}</div>
           </div>
         )}
 
@@ -143,9 +140,9 @@ export default function BottomPanel({ onHide }: { onHide: () => void }) {
                 <div className="flex flex-col items-center gap-2">
                   <div className="flex items-center gap-2 text-2xs text-darcula-dim">
                     <Smartphone size={12} className="text-darcula-accent" />
-                    <span>QChat WebView · Android 14 · 390 × 844 · mock bridge injected</span>
+                    <span>{t("bottom.previewDevice")}</span>
                     <button className="flex items-center gap-1 text-darcula-accent hover:underline" onClick={() => s.runPreview()}>
-                      <ExternalLink size={11} /> Reload
+                      <ExternalLink size={11} /> {t("bottom.previewReload")}
                     </button>
                   </div>
                   <div
@@ -164,19 +161,17 @@ export default function BottomPanel({ onHide }: { onHide: () => void }) {
               ) : (
                 <div className="text-center text-darcula-dim text-2xs">
                   <Smartphone size={32} className="mx-auto mb-2 opacity-40" />
-                  No preview. Build the project first, then click <span className="text-darcula-green">Run</span>.
+                  {t("bottom.previewNone")}
                 </div>
               )}
             </div>
             <div className="w-40 border-l border-black/30 p-2 flex flex-col gap-2 shrink-0">
-              <div className="text-2xs font-semibold text-darcula-text">Preview Settings</div>
-              <label className="text-2xs text-darcula-dim">Zoom</label>
+              <div className="text-2xs font-semibold text-darcula-text">{t("bottom.previewSettings")}</div>
+              <label className="text-2xs text-darcula-dim">{t("bottom.previewZoom")}</label>
               <input type="range" min={0.4} max={1} step={0.05} value={phoneScale} onChange={(e) => setPhoneScale(Number(e.target.value))} />
               <div className="text-2xs text-darcula-dim">{Math.round(phoneScale * 100)}%</div>
               <div className="h-px bg-white/10 my-1" />
-              <div className="text-2xs text-darcula-dim">
-                The mock bridge implements <code className="text-darcula-accent">getAppInfo</code>, <code className="text-darcula-accent">getSystemInfo</code>, <code className="text-darcula-accent">showToast</code>, <code className="text-darcula-accent">storage</code>, <code className="text-darcula-accent">chooseImage</code>, <code className="text-darcula-accent">share</code> and <code className="text-darcula-accent">request</code>.
-              </div>
+              <div className="text-2xs text-darcula-dim">{t("bottom.mockBridgeNote")}</div>
             </div>
           </div>
         )}

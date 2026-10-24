@@ -1,8 +1,10 @@
 import { GitBranch, Lock, Bell, MessageSquareWarning } from "lucide-react";
 import { useStudio } from "../lib/store";
+import { useI18n } from "../lib/i18n";
 
 export default function StatusBar() {
   const s = useStudio();
+  const { t } = useI18n();
   const active = s.openFiles.find((f) => f.path === s.activePath);
   const lang = active ? active.language.toUpperCase() : "—";
   return (
@@ -14,7 +16,7 @@ export default function StatusBar() {
         <MessageSquareWarning size={11} /> 0
       </button>
       <div className="flex-1" />
-      {s.buildRunning && <span className="text-darcula-accent mr-2 flex items-center gap-1">Building…</span>}
+      {s.buildRunning && <span className="text-darcula-accent mr-2 flex items-center gap-1">{t("status.building")}</span>}
       <span className="px-1.5">UTF-8</span>
       <span className="px-1.5">LF</span>
       <span className="px-1.5">{lang}</span>

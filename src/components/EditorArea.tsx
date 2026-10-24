@@ -5,6 +5,7 @@ import { fileLanguage } from "../lib/api";
 import CodeEditor from "./CodeEditor";
 import { useContextMenu } from "./ContextMenu";
 import { copyText } from "../lib/clipboard";
+import { useI18n } from "../lib/i18n";
 import { getActiveEditor } from "../lib/editorBridge";
 import {
   editorCopy, editorCut, editorFind, editorPaste, editorRedo, editorSelectAll, editorUndo,
@@ -18,6 +19,7 @@ function tabIcon(name: string) {
 export default function EditorArea() {
   const s = useStudio();
   const ctx = useContextMenu();
+  const { t } = useI18n();
   const active = s.openFiles.find((f) => f.path === s.activePath);
 
   const breadcrumb = active
@@ -28,18 +30,18 @@ export default function EditorArea() {
   const onEditorContextMenu = (e: ReactMouseEvent) => {
     const view = getActiveEditor();
     ctx.open(e, [
-      { label: "Undo", shortcut: "Ctrl+Z", disabled: !view, action: editorUndo },
-      { label: "Redo", shortcut: "Ctrl+Y", disabled: !view, action: editorRedo },
+      { label: t("common.undo"), shortcut: "Ctrl+Z", disabled: !view, action: editorUndo },
+      { label: t("common.redo"), shortcut: "Ctrl+Y", disabled: !view, action: editorRedo },
       { separator: true },
-      { label: "Cut", shortcut: "Ctrl+X", disabled: !hasEditorSelection(), action: () => void editorCut() },
-      { label: "Copy", shortcut: "Ctrl+C", disabled: !hasEditorSelection(), action: () => void editorCopy() },
-      { label: "Paste", shortcut: "Ctrl+V", disabled: !view, action: () => void editorPaste() },
+      { label: t("common.cut"), shortcut: "Ctrl+X", disabled: !hasEditorSelection(), action: () => void editorCut() },
+      { label: t("common.copy"), shortcut: "Ctrl+C", disabled: !hasEditorSelection(), action: () => void editorCopy() },
+      { label: t("common.paste"), shortcut: "Ctrl+V", disabled: !view, action: () => void editorPaste() },
       { separator: true },
-      { label: "Select All", shortcut: "Ctrl+A", disabled: !view, action: editorSelectAll },
-      { label: "Find…", shortcut: "Ctrl+F", disabled: !view, action: editorFind },
+      { label: t("common.selectAll"), shortcut: "Ctrl+A", disabled: !view, action: editorSelectAll },
+      { label: t("common.find"), shortcut: "Ctrl+F", disabled: !view, action: editorFind },
       { separator: true },
       {
-        label: "Save",
+        label: t("common.save"),
         shortcut: "Ctrl+S",
         disabled: !active?.dirty,
         action: () => active && void s.saveFile(active.path),
@@ -50,17 +52,17 @@ export default function EditorArea() {
   /** Right-click on a tab. */
   const onTabContextMenu = (e: ReactMouseEvent, path: string, dirty: boolean) => {
     ctx.open(e, [
-      { label: "Save", shortcut: "Ctrl+S", disabled: !dirty, action: () => void s.saveFile(path) },
+      { label: t("common.save"), shortcut: "Ctrl+S", disabled: !dirty, action: () => void s.saveFile(path) },
       { separator: true },
-      { label: "Close", action: () => s.closeTab(path) },
+      { label: t("common.close"), action: () => s.closeTab(path) },
       {
-        label: "Close Others",
+        label: t("common.closeOthers"),
         disabled: s.openFiles.length < 2,
         action: () => s.openFiles.forEach((f) => f.path !== path && s.closeTab(f.path)),
       },
-      { label: "Close All", action: () => s.openFiles.forEach((f) => s.closeTab(f.path)) },
+      { label: t("common.closeAll"), action: () => s.openFiles.forEach((f) => s.closeTab(f.path)) },
       { separator: true },
-      { label: "Copy Path", action: () => void copyText(path) },
+      { label: t("common.copyPath"), action: () => void copyText(path) },
     ]);
   };
 
@@ -88,7 +90,7 @@ export default function EditorArea() {
                 <span
                   className="w-2.5 h-2.5 rounded-full bg-darcula-modified group-hover:hidden cursor-pointer"
                   onClick={(e) => { e.stopPropagation(); s.saveFile(f.path); }}
-                  title="Unsaved — click to save"
+                  title={t("editor.unsaved")}
                 />
               ) : null}
               <button
@@ -101,7 +103,7 @@ export default function EditorArea() {
           );
         })}
         {s.openFiles.length === 0 && (
-          <div className="px-3 h-8 flex items-center text-2xs text-darcula-dim">No files open</div>
+          <div className="px-3 h-8 flex items-center text-2xs text-darcula-dim">{t("editor.noTabs")}</div>
         )}
       </div>
 
@@ -138,9 +140,9 @@ export default function EditorArea() {
               <div className="w-16 h-16 mx-auto mb-4 rounded-2xl bg-gradient-to-br from-emerald-400/20 to-emerald-800/20 grid place-items-center">
                 <FileCode2 size={32} className="text-emerald-400/60" />
               </div>
-              <p className="text-sm text-darcula-text mb-1">QChat Mini App Studio</p>
-              <p className="text-2xs">Open a file from the Project tree, or create a new project</p>
-              <p className="text-2xs mt-3 text-darcula-dim/70">Tip: press <kbd className="px-1 bg-white/10 rounded">Ctrl+S</kbd> to save · <kbd className="px-1 bg-white/10 rounded">Shift Shift</kbd> to search</p>
+              <p className="text-sm text-darcula-text mb-1">{t("app.title")}</p>
+              <p className="text-2xs">{t("editor.emptyHint")}</p>
+              <p className="text-2xs mt-3 text-darcula-dim/70">{t("editor.tip")}</p>
             </div>
           </div>
         )}
