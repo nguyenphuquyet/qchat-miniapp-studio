@@ -203,8 +203,8 @@ export function StudioProvider({ children }: { children: React.ReactNode }) {
         setPreviewUrl(null);
         setBuildLogs([]);
         loadRecent();
-        const t = await api.listTree(path);
-        setTree(t);
+        const fileTree = await api.listTree(path);
+        setTree(fileTree);
         // Auto-open manifest + App.tsx
         const manifestPath = path + "/qchat.manifest.json";
         const appPath = path + "/src/App.tsx";
