@@ -31,7 +31,6 @@ export default function WelcomeScreen() {
       {/* Left nav */}
       <div className="w-56 bg-[#333537] border-r border-black/40 py-6 flex flex-col">
         <div className="px-5 mb-8">
-          <div className="w-12 h-12 rounded-2xl bg-gradient-to-br from-emerald-400 to-emerald-800 grid place-items-center text-white font-bold text-lg font-mono mb-3">{"</>"}</div>
           <div className="text-white font-semibold text-sm">QChat Mini App Studio</div>
           <div className="text-2xs text-darcula-dim mt-0.5">Version 1.0.0 · Tauri + TypeScript</div>
         </div>

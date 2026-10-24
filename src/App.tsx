@@ -5,6 +5,7 @@ import {
 import { useStudio } from "./lib/store";
 import { api } from "./lib/api";
 import TopBar from "./components/TopBar";
+import TitleBar from "./components/TitleBar";
 import ProjectTree from "./components/ProjectTree";
 import EditorArea from "./components/EditorArea";
 import BottomPanel from "./components/BottomPanel";
@@ -51,8 +52,13 @@ export default function App() {
 
   if (!s.project) {
     return (
-      <div className="h-screen flex flex-col">
-        <WelcomeScreen />
+      <div className="h-screen flex flex-col overflow-hidden">
+        {/* The window has `decorations: false`, so the title bar is the frame:
+            it must stay mounted on the welcome screen too. */}
+        <TitleBar />
+        <div className="flex-1 min-h-0">
+          <WelcomeScreen />
+        </div>
         <NewProjectDialog />
         {s.toast && <Toast msg={s.toast} />}
       </div>
