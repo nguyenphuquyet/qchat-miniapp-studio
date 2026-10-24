@@ -69,13 +69,72 @@ fn find_in_path(exe: &str) -> Option<PathBuf> {
     std::env::split_paths(&paths).map(|dir| dir.join(exe)).find(|p| p.is_file())
 }
 
-/// The studio builds projects with the Node.js installed on the machine: `node`
-/// and `npm` are resolved through the `PATH` environment variable (nothing is
-/// bundled with the installer). Logs which runtime is used, or explains what is
-/// missing, and returns whether the build can go on.
-fn check_node_runtime(app: &AppHandle) -> bool {
-    let node = find_in_path(node_exe());
-    let npm = find_in_path(npm_cmd());
+#[derive(Clone, Serialize)]
+pub struct NodeStatus {
+    pub found: bool,
+    pub version: Option<String>,
+    pub path: Option<String>,
+    /// True when the studio can install Node.js by itself on this OS.
+    pub can_auto_install: bool,
+}
+
+#[derive(Clone, Serialize)]
+pub struct NodeInstallResult {
+    pub success: bool,
+    pub message: String,
+}
+
+/// Re-reads the machine + user `PATH` from the Windows registry and merges it
+/// into this process' `PATH`. A running app never sees a `PATH` change made after
+/// it started (e.g. right after Node.js was installed), so this fixes that.
+/// PowerShell output is forced to UTF-8 so non-ASCII user names survive.
+#[cfg(windows)]
+fn refresh_path() {
+    let mut cmd = Command::new("powershell.exe");
+    cmd.args([
+        "-NoProfile",
+        "-NonInteractive",
+        "-Command",
+        "[Console]::OutputEncoding=[Text.Encoding]::UTF8; [Environment]::ExpandEnvironmentVariables([Environment]::GetEnvironmentVariable('Path','Machine') + ';' + [Environment]::GetEnvironmentVariable('Path','User'))",
+    ]);
+    no_window(&mut cmd);
+    let Ok(out) = cmd.output() else { return };
+    if !out.status.success() {
+        return;
+    }
+    let fresh = String::from_utf8_lossy(&out.stdout).trim().to_string();
+    if fresh.is_empty() {
+        return;
+    }
+    let mut dirs: Vec<PathBuf> = std::env::split_paths(&fresh).filter(|p| !p.as_os_str().is_empty()).collect();
+    if let Some(existing) = std::env::var_os("PATH") {
+        for p in std::env::split_paths(&existing) {
+            let dup = dirs.iter().any(|d| d.to_string_lossy().eq_ignore_ascii_case(&p.to_string_lossy()));
+            if !dup && !p.as_os_str().is_empty() {
+                dirs.push(p);
+            }
+        }
+    }
+    if let Ok(joined) = std::env::join_paths(dirs) {
+        std::env::set_var("PATH", joined);
+    }
+}
+
+#[cfg(not(windows))]
+fn refresh_path() {}
+
+/// Finds `node` and `npm` through the `PATH` environment variable (nothing is
+/// bundled with the installer).
+fn detect_node() -> NodeStatus {
+    let mut node = find_in_path(node_exe());
+    let mut npm = find_in_path(npm_cmd());
+    if node.is_none() || npm.is_none() {
+        // Node.js may have been installed after the studio started: re-read PATH.
+        refresh_path();
+        node = find_in_path(node_exe());
+        npm = find_in_path(npm_cmd());
+    }
+    let can_auto_install = cfg!(windows);
     match (node, npm) {
         (Some(node), Some(_)) => {
             let mut cmd = Command::new(&node);
@@ -87,63 +146,197 @@ fn check_node_runtime(app: &AppHandle) -> bool {
                 .filter(|o| o.status.success())
                 .map(|o| String::from_utf8_lossy(&o.stdout).trim().to_string())
                 .unwrap_or_else(|| "unknown version".into());
-            log(app, "info", format!("Build runtime: system Node.js {version} · {}", node.display()));
-            true
-        }
-        (node, npm) => {
-            if node.is_none() {
-                log(app, "error", format!("`{}` was not found in the PATH environment variable.", node_exe()));
+            NodeStatus {
+                found: true,
+                version: Some(version),
+                path: Some(node.to_string_lossy().to_string()),
+                can_auto_install,
             }
-            if npm.is_none() {
-                log(app, "error", format!("`{}` was not found in the PATH environment variable.", npm_cmd()));
-            }
-            log(
-                app,
-                "error",
-                "Install Node.js (https://nodejs.org), make sure node and npm are on PATH, then restart QChat Mini App Studio.",
-            );
-            false
         }
+        _ => NodeStatus { found: false, version: None, path: None, can_auto_install },
     }
 }
 
-fn stream_lines<R: Read + Send + 'static>(app: AppHandle, reader: R, stream_name: &'static str) {
-    let reader = BufReader::new(reader);
-    thread::spawn(move || {
-        for line in reader.lines().map_while(Result::ok) {
-            let _ = app.emit("build-log", BuildLog { stream: stream_name.into(), line });
+/// Logs which runtime the build uses, or explains what is missing, and returns
+/// whether the build can go on.
+fn check_node_runtime(app: &AppHandle) -> bool {
+    let status = detect_node();
+    if status.found {
+        log(
+            app,
+            "info",
+            format!(
+                "Build runtime: system Node.js {} · {}",
+                status.version.unwrap_or_default(),
+                status.path.unwrap_or_default()
+            ),
+        );
+        return true;
+    }
+    log(app, "error", "Node.js (node / npm) was not found in the PATH environment variable.");
+    log(
+        app,
+        "error",
+        "Install Node.js (https://nodejs.org), make sure node and npm are on PATH, then restart QChat Mini App Studio.",
+    );
+    false
+}
+
+/// Called by the UI before every build: is Node.js available?
+#[tauri::command]
+pub async fn check_node() -> NodeStatus {
+    tauri::async_runtime::spawn_blocking(detect_node)
+        .await
+        .unwrap_or_else(|_| NodeStatus { found: false, version: None, path: None, can_auto_install: cfg!(windows) })
+}
+
+/// Installs Node.js LTS. Only called after the user agreed in the UI. Progress
+/// streams into the Build panel through the `build-log` event.
+#[tauri::command]
+pub async fn install_node(app: AppHandle) -> Result<NodeInstallResult, String> {
+    tauri::async_runtime::spawn_blocking(move || install_node_blocking(&app))
+        .await
+        .map_err(|e| e.to_string())
+}
+
+#[cfg(windows)]
+const INSTALL_NODE_PS1: &str = r##"
+$ErrorActionPreference = 'Stop'
+$ProgressPreference = 'SilentlyContinue'
+[Console]::OutputEncoding = [Text.Encoding]::UTF8
+[Net.ServicePointManager]::SecurityProtocol = [Net.SecurityProtocolType]::Tls12
+Write-Output 'Looking up the latest Node.js LTS on nodejs.org ...'
+$index = Invoke-RestMethod 'https://nodejs.org/dist/index.json'
+$arch = if ($env:PROCESSOR_ARCHITECTURE -eq 'ARM64') { 'arm64' } else { 'x64' }
+$version = ($index | Where-Object { $_.lts } | Select-Object -First 1).version
+$url = "https://nodejs.org/dist/$version/node-$version-$arch.msi"
+$out = Join-Path $env:TEMP "node-$version-$arch.msi"
+Write-Output "Downloading $url"
+Invoke-WebRequest $url -OutFile $out
+Write-Output 'Running the installer (Windows may ask for administrator permission) ...'
+$p = Start-Process msiexec.exe -ArgumentList '/i', "`"$out`"", '/passive', '/norestart' -Wait -PassThru
+Remove-Item $out -ErrorAction SilentlyContinue
+if ($p.ExitCode -eq 3010) { exit 0 }
+exit $p.ExitCode
+"##;
+
+/// Fallback for PCs without winget: download the official MSI and run it.
+#[cfg(windows)]
+fn install_node_msi(app: &AppHandle) -> std::io::Result<bool> {
+    let script = std::env::temp_dir().join("qchat-install-node.ps1");
+    fs::write(&script, INSTALL_NODE_PS1)?;
+    let mut cmd = Command::new("powershell.exe");
+    cmd.args(["-NoProfile", "-NonInteractive", "-ExecutionPolicy", "Bypass", "-File"]).arg(&script);
+    let result = run_command_streaming(app, cmd, true);
+    let _ = fs::remove_file(&script);
+    result
+}
+
+#[cfg(windows)]
+fn install_node_blocking(app: &AppHandle) -> NodeInstallResult {
+    log(app, "info", "Installing Node.js LTS (Windows may ask for administrator permission)…");
+    log(app, "info", "$ winget install OpenJS.NodeJS.LTS");
+    let mut winget = Command::new("winget");
+    winget.args([
+        "install",
+        "--id",
+        "OpenJS.NodeJS.LTS",
+        "--exact",
+        "--source",
+        "winget",
+        "--silent",
+        "--accept-package-agreements",
+        "--accept-source-agreements",
+    ]);
+    match run_command_streaming(app, winget, true) {
+        Ok(true) => {}
+        Ok(false) => log(app, "stderr", "winget did not finish successfully."),
+        Err(e) => {
+            // winget is missing: download the official installer instead.
+            log(app, "info", format!("winget is not available ({e}); downloading the installer from nodejs.org instead."));
+            if let Err(e) = install_node_msi(app) {
+                log(app, "error", format!("Could not run the installer: {e}"));
+            }
         }
-    });
+    }
+    let status = detect_node(); // also refreshes PATH from the registry
+    if status.found {
+        let version = status.version.unwrap_or_default();
+        log(app, "info", format!("Node.js {version} is installed."));
+        NodeInstallResult { success: true, message: format!("Node.js {version} installed") }
+    } else {
+        let message = "Node.js installation did not complete. Install it manually from https://nodejs.org and restart the studio.";
+        log(app, "error", message);
+        NodeInstallResult { success: false, message: message.into() }
+    }
+}
+
+#[cfg(not(windows))]
+fn install_node_blocking(app: &AppHandle) -> NodeInstallResult {
+    let message = "Automatic Node.js installation is only supported on Windows. Install it from https://nodejs.org and restart the studio.";
+    log(app, "error", message);
+    NodeInstallResult { success: false, message: message.into() }
+}
+
+/// Streams a child's output into the Build panel. Progress bars / spinners redraw
+/// one line with `\r`, so only the final state of each line is kept. With
+/// `compact`, one-character spinner leftovers are dropped too.
+fn stream_lines<R: Read + Send + 'static>(
+    app: AppHandle,
+    reader: R,
+    stream_name: &'static str,
+    compact: bool,
+) -> thread::JoinHandle<()> {
+    let mut reader = BufReader::new(reader);
+    thread::spawn(move || {
+        let mut buf = Vec::new();
+        loop {
+            buf.clear();
+            match reader.read_until(b'\n', &mut buf) {
+                Ok(0) | Err(_) => break,
+                Ok(_) => {
+                    let text = String::from_utf8_lossy(&buf);
+                    let text = text.trim_end_matches(|c: char| c == '\r' || c == '\n');
+                    let line = text.rsplit('\r').next().unwrap_or("");
+                    if compact && line.trim().chars().count() <= 1 {
+                        continue;
+                    }
+                    let _ = app.emit("build-log", BuildLog { stream: stream_name.into(), line: line.to_string() });
+                }
+            }
+        }
+    })
+}
+
+/// Runs `cmd` without a console window, streaming stdout/stderr to the Build
+/// panel. With `installer` set it also waits for the output to drain completely.
+fn run_command_streaming(app: &AppHandle, mut cmd: Command, installer: bool) -> std::io::Result<bool> {
+    no_window(&mut cmd);
+    let mut child = cmd.stdin(Stdio::null()).stdout(Stdio::piped()).stderr(Stdio::piped()).spawn()?;
+    let mut readers = Vec::new();
+    if let Some(out) = child.stdout.take() {
+        readers.push(stream_lines(app.clone(), out, "stdout", installer));
+    }
+    if let Some(err) = child.stderr.take() {
+        readers.push(stream_lines(app.clone(), err, "stderr", installer));
+    }
+    let status = child.wait()?;
+    if installer {
+        for r in readers {
+            let _ = r.join();
+        }
+    }
+    Ok(status.success())
 }
 
 fn run_and_stream(app: &AppHandle, cwd: &Path, args: &[&str], label: &str) -> bool {
-    let mut cmd = Command::new(npm_cmd());
     log(app, "info", format!("$ {label}"));
-    no_window(&mut cmd);
-    let mut child = match cmd
-        .args(args)
-        .current_dir(cwd)
-        .stdin(Stdio::null())
-        .stdout(Stdio::piped())
-        .stderr(Stdio::piped())
-        .spawn()
-    {
-        Ok(c) => c,
+    let mut cmd = Command::new(npm_cmd());
+    cmd.args(args).current_dir(cwd);
+    match run_command_streaming(app, cmd, false) {
+        Ok(ok) => ok,
         Err(e) => {
             log(app, "error", format!("Failed to start npm: {e}"));
-            return false;
-        }
-    };
-    if let Some(stdout) = child.stdout.take() {
-        stream_lines(app.clone(), stdout, "stdout");
-    }
-    if let Some(stderr) = child.stderr.take() {
-        stream_lines(app.clone(), stderr, "stderr");
-    }
-    match child.wait() {
-        Ok(status) => status.success(),
-        Err(e) => {
-            let _ = app.emit("build-log", BuildLog { stream: "error".into(), line: format!("Wait failed: {e}") });
             false
         }
     }

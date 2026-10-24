@@ -25,6 +25,8 @@ pub fn run() {
             commands::build::start_preview,
             commands::build::stop_preview,
             commands::build::release_zip_path,
+            commands::build::check_node,
+            commands::build::install_node,
         ])
         .setup(|app| {
             // Open devtools only in debug builds for convenience.

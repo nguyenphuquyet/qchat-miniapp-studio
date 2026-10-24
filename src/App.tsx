@@ -13,6 +13,7 @@ import BottomPanel from "./components/BottomPanel";
 import StatusBar from "./components/StatusBar";
 import WelcomeScreen from "./components/WelcomeScreen";
 import NewProjectDialog from "./components/NewProjectDialog";
+import NodeInstallDialog from "./components/NodeInstallDialog";
 import ManifestPanel from "./components/ManifestPanel";
 
 export default function App() {
@@ -152,6 +153,7 @@ export default function App() {
 
       <StatusBar />
       <NewProjectDialog />
+      <NodeInstallDialog />
       {s.toast && <Toast msg={s.toast} />}
     </div>
   );

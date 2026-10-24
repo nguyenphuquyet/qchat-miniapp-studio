@@ -13,6 +13,7 @@ import {
   type RecentProject,
 } from "./api";
 import { useI18n } from "./i18n";
+import { checkNode, installNode } from "./node";
 
 export type OpenFile = {
   path: string;
@@ -23,6 +24,7 @@ export type OpenFile = {
 };
 
 export type BottomTab = "build" | "run" | "preview" | "terminal";
+export type NodeDialogState = null | "ask" | "installing" | "failed";
 
 /**
  * UI zoom: `--ui-scale` multiplies the `html` font size, and every rem-based
@@ -65,6 +67,9 @@ type StudioState = {
   dialog: null | "new" | "open";
   toast: string | null;
   uiScale: number;
+  nodeDialog: NodeDialogState;
+  nodeCanAutoInstall: boolean;
+  nodeError: string | null;
   clearBuildLogs: () => void;
   loadRecent: () => void;
   doOpenProject: (path: string) => Promise<void>;
@@ -79,6 +84,9 @@ type StudioState = {
   saveAll: () => Promise<void>;
   runBuild: () => Promise<void>;
   runPreview: () => Promise<void>;
+  confirmNodeInstall: () => Promise<void>;
+  declineNodeInstall: () => void;
+  closeNodeDialog: () => void;
   setBottomTab: (t: BottomTab) => void;
   setRightOpen: (v: boolean) => void;
   setUiScale: (n: number) => void;
@@ -118,6 +126,9 @@ export function StudioProvider({ children }: { children: React.ReactNode }) {
   const [dialog, setDialog] = useState<null | "new" | "open">(null);
   const [toast, setToast] = useState<string | null>(null);
   const [uiScale, setUiScale] = useState(readStoredScale);
+  const [nodeDialog, setNodeDialog] = useState<NodeDialogState>(null);
+  const [nodeCanAutoInstall, setNodeCanAutoInstall] = useState(false);
+  const [nodeError, setNodeError] = useState<string | null>(null);
   const toastTimer = useRef<number | null>(null);
 
   // `t` with a stable identity (reads the current language through a ref), so the
@@ -315,8 +326,9 @@ export function StudioProvider({ children }: { children: React.ReactNode }) {
     setBuildResult(null);
   }, []);
 
-  const runBuild = useCallback(async () => {
-    if (!project || buildRunning) return;
+  /** Saves everything and starts the real build (Node.js is known to be available). */
+  const startBuild = useCallback(async () => {
+    if (!project) return;
     await saveAll();
     setBuildLogs([]);
     setBuildResult(null);
@@ -328,7 +340,53 @@ export function StudioProvider({ children }: { children: React.ReactNode }) {
       setBuildRunning(false);
       showToast(String(e));
     }
-  }, [project, buildRunning, saveAll, showToast]);
+  }, [project, saveAll, showToast]);
+
+  const runBuild = useCallback(async () => {
+    if (!project || buildRunning) return;
+    try {
+      const node = await checkNode();
+      if (!node.found) {
+        // Ask before doing anything: the build resumes only if the user agrees to install.
+        setNodeCanAutoInstall(node.can_auto_install);
+        setNodeError(null);
+        setNodeDialog("ask");
+        return;
+      }
+    } catch {
+      /* check unavailable: let the backend report a missing Node.js in the build log */
+    }
+    await startBuild();
+  }, [project, buildRunning, startBuild]);
+
+  const confirmNodeInstall = useCallback(async () => {
+    setNodeError(null);
+    setNodeDialog("installing");
+    setBottomTab("build");
+    setBuildLogs([]);
+    setBuildResult(null);
+    try {
+      const r = await installNode();
+      if (r.success) {
+        setNodeDialog(null);
+        showToast(t("toast.nodeInstalled"));
+        await startBuild();
+      } else {
+        setNodeError(r.message);
+        setNodeDialog("failed");
+      }
+    } catch (e) {
+      setNodeError(String(e));
+      setNodeDialog("failed");
+    }
+  }, [startBuild, showToast, t]);
+
+  const declineNodeInstall = useCallback(() => {
+    setNodeDialog(null);
+    showToast(t("toast.nodeDeclined"));
+  }, [showToast, t]);
+
+  const closeNodeDialog = useCallback(() => setNodeDialog(null), []);
 
   const runPreview = useCallback(async () => {
     if (!project) return;
@@ -390,9 +448,11 @@ export function StudioProvider({ children }: { children: React.ReactNode }) {
   const value: StudioState = {
     project, tree, recent, openFiles, activePath, buildLogs, buildRunning, buildResult,
     previewUrl, bottomTab, rightOpen, cursor, dialog, toast, uiScale,
+    nodeDialog, nodeCanAutoInstall, nodeError,
     loadRecent, doOpenProject, doCreateProject, closeProject, refreshTree,
     openFile: openFilePath, closeTab, setActive, updateContent, saveFile, saveAll,
     runBuild, runPreview, setBottomTab, setRightOpen, clearBuildLogs,
+    confirmNodeInstall, declineNodeInstall, closeNodeDialog,
     setUiScale: (n: number) => setUiScale(clampScale(n)),
     zoomIn, zoomOut, resetZoom,
     setCursor: (line: number, col: number) => setCursor({ line, col }),
