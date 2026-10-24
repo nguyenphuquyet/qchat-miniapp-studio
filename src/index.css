@@ -1,0 +1,119 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+html,
+body,
+#root {
+  height: 100%;
+  margin: 0;
+  padding: 0;
+  overflow: hidden;
+  background: #3c3f41;
+  color: #bbbbbb;
+  font-family: "Inter", "Segoe UI", system-ui, sans-serif;
+  font-size: 13px;
+  -webkit-font-smoothing: antialiased;
+  user-select: none;
+}
+
+* {
+  box-sizing: border-box;
+}
+
+/* Darcula scrollbars */
+::-webkit-scrollbar {
+  width: 12px;
+  height: 12px;
+}
+::-webkit-scrollbar-track {
+  background: #2b2b2b;
+}
+::-webkit-scrollbar-thumb {
+  background: #56595c;
+  border: 3px solid #2b2b2b;
+  border-radius: 8px;
+}
+::-webkit-scrollbar-thumb:hover {
+  background: #6b6f73;
+}
+::-webkit-scrollbar-corner {
+  background: #2b2b2b;
+}
+
+/* CodeMirror Darcula */
+.cm-editor {
+  height: 100%;
+  background: #2b2b2b;
+  font-family: "JetBrains Mono", "Fira Code", Consolas, monospace;
+  font-size: 13px;
+  line-height: 1.6;
+}
+.cm-editor .cm-scroller {
+  font-family: "JetBrains Mono", "Fira Code", Consolas, monospace;
+  overflow: auto;
+}
+.cm-editor .cm-gutters {
+  background: #313335;
+  color: #606366;
+  border-right: 1px solid #323232;
+  font-family: "JetBrains Mono", monospace;
+}
+.cm-editor .cm-activeLineGutter {
+  background: #323232;
+  color: #a4a3a3;
+}
+.cm-editor .cm-activeLine {
+  background: #323232;
+}
+.cm-editor .cm-selectionBackground,
+.cm-editor.cm-focused .cm-selectionBackground {
+  background: #214283 !important;
+}
+.cm-editor .cm-cursor {
+  border-left-color: #ffffff;
+}
+.cm-editor .cm-matchingBracket {
+  background: #3a5a3a;
+  outline: 1px solid #59a869;
+}
+.cm-editor .cm-tooltip {
+  background: #3c3f41;
+  border: 1px solid #4b4f52;
+  color: #bbbbbb;
+}
+.cm-editor .cm-completionIcon {
+  opacity: 0.7;
+}
+.cm-editor .cm-panel.cm-search {
+  background: #3c3f41;
+  color: #bbbbbb;
+  border-top: 1px solid #323232;
+}
+.cm-editor .cm-panel input {
+  background: #2b2b2b;
+  border: 1px solid #4b4f52;
+  color: #bbbbbb;
+  border-radius: 3px;
+  padding: 2px 6px;
+}
+.cm-editor .cm-foldGutter span {
+  color: #808080;
+}
+
+input,
+textarea,
+select {
+  user-select: text;
+}
+
+button {
+  font-family: inherit;
+}
+
+.drag-region {
+  -webkit-app-region: drag;
+}
+.no-drag {
+  -webkit-app-region: no-drag;
+}

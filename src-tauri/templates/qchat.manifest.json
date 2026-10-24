@@ -1,0 +1,10 @@
+{
+  "schemaVersion": 1,
+  "appId": "{{appId}}",
+  "name": "{{name}}",
+  "description": "{{description}}",
+  "version": "{{version}}",
+  "entry": "index.html",
+  "minRuntimeVersion": "1.0.0",
+  "requestedPermissions": {{permissions}}
+}
