@@ -9,7 +9,7 @@ use std::thread;
 use std::time::Duration;
 
 use serde::Serialize;
-use tauri::{AppHandle, Emitter, Manager, State};
+use tauri::{AppHandle, Emitter, State};
 
 use crate::templates::MOCK_BRIDGE_JS;
 
@@ -58,49 +58,53 @@ fn no_window(cmd: &mut Command) {
 #[cfg(not(windows))]
 fn no_window(_cmd: &mut Command) {}
 
-/// Directory of the Node.js runtime shipped inside the app, when present.
-///
-/// CI stages the official Node.js build into `src-tauri/resources/node` before
-/// `tauri build` (see `.github/workflows/build-windows.yml`), so the studio can
-/// build projects on a machine that has no Node.js installed.
-fn bundled_node_dir(app: &AppHandle) -> Option<PathBuf> {
-    let mut candidates: Vec<PathBuf> = Vec::new();
-    if let Ok(dir) = app.path().resource_dir() {
-        // Tauri keeps the path relative to `src-tauri`, but be tolerant about it.
-        candidates.push(dir.join("resources").join("node"));
-        candidates.push(dir.join("node"));
-    }
-    // `tauri dev` / `cargo run` straight from the repository.
-    candidates.push(PathBuf::from(env!("CARGO_MANIFEST_DIR")).join("resources").join("node"));
-    candidates.into_iter().find(|dir| dir.join(node_exe()).is_file())
+/// Emits one line to the in-app Build panel.
+fn log(app: &AppHandle, stream: &str, line: impl Into<String>) {
+    let _ = app.emit("build-log", BuildLog { stream: stream.into(), line: line.into() });
 }
 
-/// Prepends `dir` to the `PATH` of a child process so npm lifecycle scripts
-/// (`node`, `node-gyp`, nested `npm`) pick up the bundled runtime.
-fn prepend_path(cmd: &mut Command, dir: &Path) {
-    let mut paths = vec![dir.to_path_buf()];
-    if let Some(existing) = std::env::var_os("PATH") {
-        paths.extend(std::env::split_paths(&existing));
-    }
-    if let Ok(joined) = std::env::join_paths(paths) {
-        cmd.env("PATH", joined);
-    }
+/// Looks `exe` up in the directories listed in the `PATH` environment variable.
+fn find_in_path(exe: &str) -> Option<PathBuf> {
+    let paths = std::env::var_os("PATH")?;
+    std::env::split_paths(&paths).map(|dir| dir.join(exe)).find(|p| p.is_file())
 }
 
-/// Resolves how npm gets invoked: the Node.js runtime bundled with the app when
-/// one is available, otherwise the system-wide npm. Returns the command plus a
-/// label describing the runtime (surfaced in the in-app build log).
-fn npm_command(app: &AppHandle) -> (Command, String) {
-    if let Some(dir) = bundled_node_dir(app) {
-        let npm_cli = dir.join("node_modules").join("npm").join("bin").join("npm-cli.js");
-        if npm_cli.is_file() {
-            let mut cmd = Command::new(dir.join(node_exe()));
-            cmd.arg(&npm_cli);
-            prepend_path(&mut cmd, &dir);
-            return (cmd, format!("bundled Node.js · {}", dir.display()));
+/// The studio builds projects with the Node.js installed on the machine: `node`
+/// and `npm` are resolved through the `PATH` environment variable (nothing is
+/// bundled with the installer). Logs which runtime is used, or explains what is
+/// missing, and returns whether the build can go on.
+fn check_node_runtime(app: &AppHandle) -> bool {
+    let node = find_in_path(node_exe());
+    let npm = find_in_path(npm_cmd());
+    match (node, npm) {
+        (Some(node), Some(_)) => {
+            let mut cmd = Command::new(&node);
+            cmd.arg("--version");
+            no_window(&mut cmd);
+            let version = cmd
+                .output()
+                .ok()
+                .filter(|o| o.status.success())
+                .map(|o| String::from_utf8_lossy(&o.stdout).trim().to_string())
+                .unwrap_or_else(|| "unknown version".into());
+            log(app, "info", format!("Build runtime: system Node.js {version} · {}", node.display()));
+            true
+        }
+        (node, npm) => {
+            if node.is_none() {
+                log(app, "error", format!("`{}` was not found in the PATH environment variable.", node_exe()));
+            }
+            if npm.is_none() {
+                log(app, "error", format!("`{}` was not found in the PATH environment variable.", npm_cmd()));
+            }
+            log(
+                app,
+                "error",
+                "Install Node.js (https://nodejs.org), make sure node and npm are on PATH, then restart QChat Mini App Studio.",
+            );
+            false
         }
     }
-    (Command::new(npm_cmd()), format!("system {} (no bundled Node.js found)", npm_cmd()))
 }
 
 fn stream_lines<R: Read + Send + 'static>(app: AppHandle, reader: R, stream_name: &'static str) {
@@ -113,8 +117,8 @@ fn stream_lines<R: Read + Send + 'static>(app: AppHandle, reader: R, stream_name
 }
 
 fn run_and_stream(app: &AppHandle, cwd: &Path, args: &[&str], label: &str) -> bool {
-    let (mut cmd, runtime) = npm_command(app);
-    let _ = app.emit("build-log", BuildLog { stream: "info".into(), line: format!("$ {label}  [{runtime}]") });
+    let mut cmd = Command::new(npm_cmd());
+    log(app, "info", format!("$ {label}"));
     no_window(&mut cmd);
     let mut child = match cmd
         .args(args)
@@ -126,7 +130,7 @@ fn run_and_stream(app: &AppHandle, cwd: &Path, args: &[&str], label: &str) -> bo
     {
         Ok(c) => c,
         Err(e) => {
-            let _ = app.emit("build-log", BuildLog { stream: "error".into(), line: format!("Failed to start npm: {e}") });
+            log(app, "error", format!("Failed to start npm: {e}"));
             return false;
         }
     };
@@ -165,11 +169,17 @@ pub fn build_project(app: AppHandle, project_path: String) -> Result<(), String>
     }
     thread::spawn(move || {
         let app2 = app.clone();
-        let (_, runtime) = npm_command(&app2);
-        let _ = app2.emit(
-            "build-log",
-            BuildLog { stream: "info".into(), line: format!("Build runtime: {runtime}") },
-        );
+        if !check_node_runtime(&app2) {
+            let _ = app2.emit(
+                "build-done",
+                BuildDone {
+                    success: false,
+                    message: "Node.js was not found in PATH. See the log above.".into(),
+                    zip_path: None,
+                },
+            );
+            return;
+        }
         let needs_install = !cwd.join("node_modules").exists();
         let ok_install = !needs_install || run_and_stream(&app2, &cwd, &["install"], "npm install");
         let ok_build = ok_install && run_and_stream(&app2, &cwd, &["run", "build"], "npm run build");
