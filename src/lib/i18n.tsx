@@ -189,6 +189,7 @@ const vi = {
   "node.failed.body": "Không cài được Node.js tự động. Xem chi tiết ở tab Build, hoặc cài thủ công từ https://nodejs.org rồi khởi động lại studio.",
   "toast.nodeInstalled": "Đã cài Node.js",
   "toast.nodeDeclined": "Đã bỏ qua cài Node.js — không thể build nếu thiếu Node.js",
+  "bottom.openFolder": "Mở thư mục",
 } satisfies Record<string, string>;
 
 export type I18nKey = keyof typeof vi;
@@ -367,6 +368,7 @@ const en: Record<I18nKey, string> = {
   "node.failed.body": "Node.js could not be installed automatically. See the Build tab for details, or install it manually from https://nodejs.org and restart the studio.",
   "toast.nodeInstalled": "Node.js installed",
   "toast.nodeDeclined": "Node.js installation skipped — builds are not possible without Node.js",
+  "bottom.openFolder": "Open folder",
 };
 
 const zh: Record<I18nKey, string> = {
@@ -543,6 +545,7 @@ const zh: Record<I18nKey, string> = {
   "node.failed.body": "无法自动安装 Node.js。详情见“构建”标签，或从 https://nodejs.org 手动安装后重启 Studio。",
   "toast.nodeInstalled": "Node.js 已安装",
   "toast.nodeDeclined": "已跳过安装 Node.js — 没有 Node.js 无法构建",
+  "bottom.openFolder": "打开文件夹",
 };
 
 const DICTS: Record<Lang, Record<I18nKey, string>> = { vi, en, zh };

@@ -342,6 +342,48 @@ fn run_and_stream(app: &AppHandle, cwd: &Path, args: &[&str], label: &str) -> bo
     }
 }
 
+/// Shows `path` in the system file manager: a file is selected inside its
+/// folder, a folder is opened.
+#[cfg(windows)]
+fn reveal(path: &Path) -> std::io::Result<()> {
+    use std::os::windows::process::CommandExt;
+    let native = path.to_string_lossy().replace('/', "\\");
+    let mut cmd = Command::new("explorer.exe");
+    if path.is_dir() {
+        cmd.arg(&native);
+    } else {
+        // explorer needs `/select,"<path>"` as ONE argument with its own quoting.
+        cmd.raw_arg(format!("/select,\"{native}\""));
+    }
+    cmd.spawn().map(|_| ()) // explorer.exe reports exit code 1 even on success: don't wait
+}
+
+#[cfg(target_os = "macos")]
+fn reveal(path: &Path) -> std::io::Result<()> {
+    let mut cmd = Command::new("open");
+    if path.is_dir() {
+        cmd.arg(path);
+    } else {
+        cmd.arg("-R").arg(path);
+    }
+    cmd.spawn().map(|_| ())
+}
+
+#[cfg(not(any(windows, target_os = "macos")))]
+fn reveal(path: &Path) -> std::io::Result<()> {
+    let dir = if path.is_dir() { path } else { path.parent().unwrap_or(path) };
+    Command::new("xdg-open").arg(dir).spawn().map(|_| ())
+}
+
+#[tauri::command]
+pub fn reveal_in_folder(path: String) -> Result<(), String> {
+    let p = Path::new(&path);
+    if !p.exists() {
+        return Err(format!("Path not found: {path}"));
+    }
+    reveal(p).map_err(|e| e.to_string())
+}
+
 fn find_release_zip(project_path: &Path) -> Option<String> {
     let release = project_path.join("release");
     let read = fs::read_dir(&release).ok()?;

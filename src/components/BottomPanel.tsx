@@ -1,12 +1,13 @@
 import { useEffect, useRef, useState } from "react";
 import {
   Hammer, Play, TerminalSquare, Smartphone, ChevronUp, X, CheckCircle2,
-  XCircle, Loader2, Package, ExternalLink, ClipboardCopy, Eraser,
+  XCircle, Loader2, Package, ExternalLink, ClipboardCopy, Eraser, FolderOpen,
 } from "lucide-react";
 import { useStudio } from "../lib/store";
 import type { BottomTab } from "../lib/store";
 import { useContextMenu } from "./ContextMenu";
 import { copyText } from "../lib/clipboard";
+import { revealInFolder } from "../lib/shell";
 import { useI18n, type I18nKey } from "../lib/i18n";
 import type { MouseEvent as ReactMouseEvent } from "react";
 
@@ -23,6 +24,12 @@ export default function BottomPanel({ onHide }: { onHide: () => void }) {
   const { t } = useI18n();
   const logRef = useRef<HTMLDivElement>(null);
   const [phoneScale, setPhoneScale] = useState(1);
+
+  /** Opens the folder with the built ZIP (falls back to the project's release/ folder). */
+  const openBuildFolder = () => {
+    const target = s.buildResult?.zip_path ?? (s.project ? s.project.path + "/release" : null);
+    if (target) revealInFolder(target).catch((e) => s.showToast(String(e)));
+  };
 
   useEffect(() => {
     if (logRef.current) logRef.current.scrollTop = logRef.current.scrollHeight;
@@ -78,6 +85,9 @@ export default function BottomPanel({ onHide }: { onHide: () => void }) {
           <span className="flex items-center gap-1 text-2xs text-darcula-green mr-2">
             <Package size={12} />
             <span className="max-w-[240px] truncate">{t("bottom.package", { path: s.buildResult.zip_path.split(/[\\/]/).pop() ?? "" })}</span>
+            <button className="p-0.5 hover:bg-white/10 rounded" title={t("bottom.openFolder")} onClick={openBuildFolder}>
+              <FolderOpen size={12} />
+            </button>
           </span>
         )}
         <button className="p-1 hover:bg-white/10 rounded" onClick={onHide} title={t("common.hide")}>
@@ -114,6 +124,14 @@ export default function BottomPanel({ onHide }: { onHide: () => void }) {
               <div className={`mt-2 flex items-center gap-2 font-semibold ${s.buildResult.success ? "text-darcula-green" : "text-darcula-red"}`}>
                 {s.buildResult.success ? <CheckCircle2 size={14} /> : <XCircle size={14} />}
                 {t(s.buildResult.success ? "bottom.buildSucceeded" : "bottom.buildFailed")}
+                {s.buildResult.success && (
+                  <button
+                    className="ml-2 flex items-center gap-1 px-2 py-0.5 rounded bg-white/10 hover:bg-white/20 text-white font-normal"
+                    onClick={openBuildFolder}
+                  >
+                    <FolderOpen size={12} /> {t("bottom.openFolder")}
+                  </button>
+                )}
               </div>
             )}
           </div>
