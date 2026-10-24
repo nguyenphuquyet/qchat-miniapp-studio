@@ -1,0 +1,545 @@
+import { createContext, useCallback, useContext, useEffect, useMemo, useState, type ReactNode } from "react";
+
+/**
+ * Lightweight i18n for the studio.
+ *
+ * Vietnamese is the primary language (default), English and Simplified Chinese
+ * are secondary. No dependency is needed: `vi` defines the key set and the other
+ * dictionaries are typed against it, so a missing translation is a type error.
+ */
+export const LANGS = [
+  { id: "vi", label: "Tiếng Việt", short: "VI" },
+  { id: "zh", label: "中文（简体）", short: "中" },
+  { id: "en", label: "English", short: "EN" },
+] as const;
+
+export type Lang = (typeof LANGS)[number]["id"];
+
+const vi = {
+  "app.title": "QChat Mini App Studio",
+
+  "common.cancel": "Hủy",
+  "common.create": "Tạo",
+  "common.close": "Đóng",
+  "common.save": "Lưu",
+  "common.saveAll": "Lưu tất cả",
+  "common.delete": "Xóa",
+  "common.reload": "Tải lại",
+  "common.refresh": "Làm mới",
+  "common.open": "Mở",
+  "common.copy": "Sao chép",
+  "common.cut": "Cắt",
+  "common.paste": "Dán",
+  "common.undo": "Hoàn tác",
+  "common.redo": "Làm lại",
+  "common.selectAll": "Chọn tất cả",
+  "common.find": "Tìm kiếm…",
+  "common.newFile": "Tệp mới",
+  "common.newDirectory": "Thư mục mới",
+  "common.copyPath": "Sao chép đường dẫn",
+  "common.closeOthers": "Đóng các tab khác",
+  "common.closeAll": "Đóng tất cả",
+  "common.copyLog": "Sao chép nhật ký",
+  "common.clearLog": "Xóa nhật ký",
+  "common.runBuild": "Chạy build",
+  "common.minimize": "Thu nhỏ",
+  "common.maximize": "Phóng to / khôi phục",
+  "common.zoomIn": "Phóng to giao diện",
+  "common.zoomOut": "Thu nhỏ giao diện",
+  "common.resetZoom": "Cỡ mặc định",
+  "common.language": "Ngôn ngữ",
+
+  "menu.file": "Tệp",
+  "menu.file.new": "Dự án Mini App mới…",
+  "menu.file.open": "Mở…",
+  "menu.file.closeProject": "Đóng dự án",
+  "menu.edit": "Sửa",
+  "menu.view": "Hiển thị",
+  "menu.view.toolWindows": "Cửa sổ công cụ ›",
+  "menu.view.appearance": "Giao diện ›",
+  "menu.navigate": "Điều hướng",
+  "menu.navigate.searchEverywhere": "Tìm kiếm mọi nơi",
+  "menu.code": "Mã nguồn",
+  "menu.code.overrideMethods": "Ghi đè phương thức…",
+  "menu.analyze": "Phân tích",
+  "menu.analyze.inspectCode": "Kiểm tra mã…",
+  "menu.refactor": "Tái cấu trúc",
+  "menu.refactor.rename": "Đổi tên…",
+  "menu.build": "Build",
+  "menu.build.zip": "Đóng gói Mini App (ZIP)",
+  "menu.build.rebuild": "Build lại dự án",
+  "menu.run": "Chạy",
+  "menu.run.app": "Chạy 'app'",
+  "menu.run.preview": "Xem trước trong IDE",
+  "menu.tools": "Công cụ",
+  "menu.tools.sdkManager": "Quản lý SDK…",
+  "menu.vcs": "Quản lý phiên bản",
+  "menu.vcs.createRepo": "Tạo kho Git…",
+  "menu.window": "Cửa sổ",
+  "menu.window.restoreLayout": "Khôi phục bố cục mặc định",
+  "menu.help": "Trợ giúp",
+  "menu.help.about": "Giới thiệu QChat Mini App Studio",
+  "about.text": "QChat Mini App Studio 1.0 — Tauri + TypeScript",
+
+  "toolbar.run": "Chạy 'app' (build + xem trước)",
+  "toolbar.debug": "Gỡ lỗi 'app' (sắp có)",
+  "toolbar.buildZip": "Đóng gói Mini App (ZIP)",
+  "toolbar.preview": "Xem trước QChat Mini App",
+  "toolbar.searchEverywhere": "Tìm kiếm mọi nơi",
+  "toolbar.sdk": "Mini App SDK 1.0.0",
+
+  "welcome.nav.projects": "Dự án",
+  "welcome.nav.customize": "Tùy biến",
+  "welcome.nav.plugins": "Tiện ích",
+  "welcome.nav.learn": "Học",
+  "welcome.version": "Phiên bản 1.0.0 · Tauri + TypeScript",
+  "welcome.newProject": "Dự án mới",
+  "welcome.open": "Mở",
+  "welcome.recent": "Dự án gần đây",
+  "welcome.noRecent": "Chưa có dự án nào. Hãy tạo QChat Mini App đầu tiên.",
+  "welcome.removeRecent": "Bỏ khỏi danh sách",
+  "welcome.card1.title": "Định dạng Mini App",
+  "welcome.card1.desc": "React + Vite, @qchat/miniapp-sdk đi kèm, qchat.manifest.json",
+  "welcome.card2.title": "Build một cú nhấp",
+  "welcome.card2.desc": "npm install → vite build → đóng gói ZIP trong thư mục release/",
+  "welcome.card3.title": "Xem trước trực tiếp",
+  "welcome.card3.desc": "Cầu QChatNative giả lập bên trong WebView mô phỏng",
+  "welcome.footer": "Xây dựng QChat Mini App (React + Vite) và đóng gói thành ZIP bất biến cho QChat runtime.",
+
+  "tree.title": "Dự án",
+  "tree.subtitle": "Mini App",
+  "tree.noProject": "Chưa mở dự án",
+  "tree.collapseAll": "Thu gọn tất cả",
+  "tree.refresh": "Làm mới",
+  "tree.fileNamePrompt": "Tên tệp:",
+  "tree.dirNamePrompt": "Tên thư mục:",
+  "tree.deleteConfirm": "Xóa {path}?",
+
+  "bottom.tab.build": "Build",
+  "bottom.tab.run": "Chạy",
+  "bottom.tab.preview": "Xem trước",
+  "bottom.tab.terminal": "Terminal",
+  "bottom.buildHint": "Nhật ký build sẽ hiện ở đây. Bấm Chạy hoặc Build để đóng gói ZIP cho Mini App.",
+  "bottom.building": "Đang build…",
+  "bottom.buildSucceeded": "Build thành công.",
+  "bottom.buildFailed": "Build thất bại. Xem nhật ký phía trên.",
+  "bottom.package": "Gói: {path}",
+  "bottom.runHint": "Dùng tab Xem trước để chạy Mini App đã build bên trong WebView QChat mô phỏng.",
+  "bottom.terminalHint": "Lệnh build và xem trước chạy trong app / chạy ngầm — không mở cửa sổ console nào. Mọi thứ chúng in ra đều đổ vào tab Build, và studio dùng Node.js đi kèm bộ cài khi có.",
+  "bottom.previewNone": "Chưa có bản xem trước. Hãy build dự án rồi bấm Chạy.",
+  "bottom.previewReload": "Tải lại",
+  "bottom.previewDevice": "QChat WebView · Android 14 · 390 × 844 · đã bơm cầu giả lập",
+  "bottom.previewSettings": "Cấu hình xem trước",
+  "bottom.previewZoom": "Thu phóng",
+  "bottom.mockBridgeNote": "Cầu giả lập hỗ trợ getAppInfo, getSystemInfo, showToast, storage, chooseImage, share và request.",
+
+  "status.building": "Đang build…",
+
+  "manifest.title": "Mini App Manifest",
+  "manifest.appName": "Tên ứng dụng",
+  "manifest.appId": "App ID",
+  "manifest.version": "Phiên bản",
+  "manifest.description": "Mô tả",
+  "manifest.permissions": "Quyền",
+  "manifest.apply": "Ghi vào qchat.manifest.json",
+  "manifest.note": "Thay đổi được ghi vào qchat.manifest.json. Bộ đóng gói ZIP kiểm tra appId và version khi build.",
+
+  "newProject.title": "Dự án QChat Mini App mới",
+  "newProject.appName": "Tên ứng dụng",
+  "newProject.appId": "App ID (lấy từ Developer Center, dạng mp_...)",
+  "newProject.description": "Mô tả",
+  "newProject.version": "Phiên bản (semver)",
+  "newProject.location": "Vị trí",
+  "newProject.locationPlaceholder": "Chọn thư mục…",
+  "newProject.permissions": "Quyền yêu cầu",
+  "newProject.regenerate": "Tạo lại",
+  "newProject.errName": "Cần nhập tên dự án",
+  "newProject.errLocation": "Hãy chọn thư mục cha",
+  "newProject.errAppId": "App ID phải có dạng mp_<12-24 ký tự hex>",
+
+  "editor.noTabs": "Chưa mở tệp nào",
+  "editor.emptyHint": "Mở một tệp từ cây Dự án, hoặc tạo dự án mới",
+  "editor.tip": "Mẹo: nhấn Ctrl+S để lưu · Shift Shift để tìm kiếm",
+
+  "toast.fileSaved": "Đã lưu tệp",
+  "toast.allSaved": "Đã lưu tất cả tệp",
+  "toast.opened": "Đã mở {name}",
+  "toast.manifestUpdated": "Đã cập nhật manifest",
+  "toast.buildSucceeded": "Build thành công",
+  "toast.buildFailed": "Build thất bại",
+  "toast.previewStarted": "Đã bắt đầu xem trước",
+  "toast.structureSoon": "Chế độ xem cấu trúc sắp có",
+  "toast.gitSoon": "Tích hợp Git sắp có",
+} satisfies Record<string, string>;
+
+export type I18nKey = keyof typeof vi;
+
+const en: Record<I18nKey, string> = {
+  "app.title": "QChat Mini App Studio",
+
+  "common.cancel": "Cancel",
+  "common.create": "Create",
+  "common.close": "Close",
+  "common.save": "Save",
+  "common.saveAll": "Save All",
+  "common.delete": "Delete",
+  "common.reload": "Reload",
+  "common.refresh": "Refresh",
+  "common.open": "Open",
+  "common.copy": "Copy",
+  "common.cut": "Cut",
+  "common.paste": "Paste",
+  "common.undo": "Undo",
+  "common.redo": "Redo",
+  "common.selectAll": "Select All",
+  "common.find": "Find…",
+  "common.newFile": "New File",
+  "common.newDirectory": "New Directory",
+  "common.copyPath": "Copy Path",
+  "common.closeOthers": "Close Others",
+  "common.closeAll": "Close All",
+  "common.copyLog": "Copy Log",
+  "common.clearLog": "Clear Log",
+  "common.runBuild": "Run Build",
+  "common.minimize": "Minimize",
+  "common.maximize": "Maximize / Restore",
+  "common.zoomIn": "Zoom In",
+  "common.zoomOut": "Zoom Out",
+  "common.resetZoom": "Reset Zoom",
+  "common.language": "Language",
+
+  "menu.file": "File",
+  "menu.file.new": "New Mini App Project...",
+  "menu.file.open": "Open...",
+  "menu.file.closeProject": "Close Project",
+  "menu.edit": "Edit",
+  "menu.view": "View",
+  "menu.view.toolWindows": "Tool Windows >",
+  "menu.view.appearance": "Appearance >",
+  "menu.navigate": "Navigate",
+  "menu.navigate.searchEverywhere": "Search Everywhere",
+  "menu.code": "Code",
+  "menu.code.overrideMethods": "Override Methods...",
+  "menu.analyze": "Analyze",
+  "menu.analyze.inspectCode": "Inspect Code...",
+  "menu.refactor": "Refactor",
+  "menu.refactor.rename": "Rename...",
+  "menu.build": "Build",
+  "menu.build.zip": "Build Mini App (ZIP)",
+  "menu.build.rebuild": "Rebuild Project",
+  "menu.run": "Run",
+  "menu.run.app": "Run 'app'",
+  "menu.run.preview": "Preview in IDE",
+  "menu.tools": "Tools",
+  "menu.tools.sdkManager": "SDK Manager...",
+  "menu.vcs": "VCS",
+  "menu.vcs.createRepo": "Create Git Repository...",
+  "menu.window": "Window",
+  "menu.window.restoreLayout": "Restore Default Layout",
+  "menu.help": "Help",
+  "menu.help.about": "About QChat Mini App Studio",
+  "about.text": "QChat Mini App Studio 1.0 — Tauri + TypeScript",
+
+  "toolbar.run": "Run 'app' (build + preview)",
+  "toolbar.debug": "Debug 'app' (coming soon)",
+  "toolbar.buildZip": "Build Mini App (ZIP)",
+  "toolbar.preview": "QChat Mini App Preview",
+  "toolbar.searchEverywhere": "Search Everywhere",
+  "toolbar.sdk": "Mini App SDK 1.0.0",
+
+  "welcome.nav.projects": "Projects",
+  "welcome.nav.customize": "Customize",
+  "welcome.nav.plugins": "Plugins",
+  "welcome.nav.learn": "Learn",
+  "welcome.version": "Version 1.0.0 · Tauri + TypeScript",
+  "welcome.newProject": "New Project",
+  "welcome.open": "Open",
+  "welcome.recent": "Recent Projects",
+  "welcome.noRecent": "No recent projects. Create your first QChat Mini App.",
+  "welcome.removeRecent": "Remove from list",
+  "welcome.card1.title": "Mini App format",
+  "welcome.card1.desc": "React + Vite, vendored @qchat/miniapp-sdk, qchat.manifest.json",
+  "welcome.card2.title": "One-click build",
+  "welcome.card2.desc": "npm install → vite build → ZIP package in release/",
+  "welcome.card3.title": "Live preview",
+  "welcome.card3.desc": "Mock QChatNative bridge inside a simulated WebView",
+  "welcome.footer": "Build QChat Mini Apps (React + Vite) and package them as immutable ZIPs for the QChat runtime.",
+
+  "tree.title": "Project",
+  "tree.subtitle": "Mini App",
+  "tree.noProject": "No project open",
+  "tree.collapseAll": "Collapse All",
+  "tree.refresh": "Refresh",
+  "tree.fileNamePrompt": "File name:",
+  "tree.dirNamePrompt": "Directory name:",
+  "tree.deleteConfirm": "Delete {path}?",
+
+  "bottom.tab.build": "Build",
+  "bottom.tab.run": "Run",
+  "bottom.tab.preview": "Preview",
+  "bottom.tab.terminal": "Terminal",
+  "bottom.buildHint": "Build output will appear here. Click Run or Build to package the Mini App ZIP.",
+  "bottom.building": "Building…",
+  "bottom.buildSucceeded": "Build succeeded.",
+  "bottom.buildFailed": "Build failed. See the log above.",
+  "bottom.package": "Package: {path}",
+  "bottom.runHint": "Use the Preview tab to run the built Mini App inside a simulated QChat WebView.",
+  "bottom.terminalHint": "Build and preview commands run inside the app / in the background — no external console window is opened. Everything they print streams into the Build tab, and the studio uses its bundled Node.js runtime when one is shipped with the installer.",
+  "bottom.previewNone": "No preview. Build the project first, then click Run.",
+  "bottom.previewReload": "Reload",
+  "bottom.previewDevice": "QChat WebView · Android 14 · 390 × 844 · mock bridge injected",
+  "bottom.previewSettings": "Preview Settings",
+  "bottom.previewZoom": "Zoom",
+  "bottom.mockBridgeNote": "The mock bridge implements getAppInfo, getSystemInfo, showToast, storage, chooseImage, share and request.",
+
+  "status.building": "Building…",
+
+  "manifest.title": "Mini App Manifest",
+  "manifest.appName": "App name",
+  "manifest.appId": "App ID",
+  "manifest.version": "Version",
+  "manifest.description": "Description",
+  "manifest.permissions": "Permissions",
+  "manifest.apply": "Apply to qchat.manifest.json",
+  "manifest.note": "Edits are written to qchat.manifest.json. The ZIP packager validates appId and version at build time.",
+
+  "newProject.title": "New QChat Mini App Project",
+  "newProject.appName": "App name",
+  "newProject.appId": "App ID (from Developer Center, format mp_...) ",
+  "newProject.description": "Description",
+  "newProject.version": "Version (semver)",
+  "newProject.location": "Location",
+  "newProject.locationPlaceholder": "Choose folder...",
+  "newProject.permissions": "Requested permissions",
+  "newProject.regenerate": "Regenerate",
+  "newProject.errName": "Project name is required",
+  "newProject.errLocation": "Choose a parent directory",
+  "newProject.errAppId": "App ID must match mp_<12-24 hex chars>",
+
+  "editor.noTabs": "No files open",
+  "editor.emptyHint": "Open a file from the Project tree, or create a new project",
+  "editor.tip": "Tip: press Ctrl+S to save · Shift Shift to search",
+
+  "toast.fileSaved": "File saved",
+  "toast.allSaved": "All files saved",
+  "toast.opened": "Opened {name}",
+  "toast.manifestUpdated": "Manifest updated",
+  "toast.buildSucceeded": "Build succeeded",
+  "toast.buildFailed": "Build failed",
+  "toast.previewStarted": "Preview started",
+  "toast.structureSoon": "Structure view coming soon",
+  "toast.gitSoon": "Git integration coming soon",
+};
+
+const zh: Record<I18nKey, string> = {
+  "app.title": "QChat Mini App Studio",
+
+  "common.cancel": "取消",
+  "common.create": "创建",
+  "common.close": "关闭",
+  "common.save": "保存",
+  "common.saveAll": "全部保存",
+  "common.delete": "删除",
+  "common.reload": "重新加载",
+  "common.refresh": "刷新",
+  "common.open": "打开",
+  "common.copy": "复制",
+  "common.cut": "剪切",
+  "common.paste": "粘贴",
+  "common.undo": "撤销",
+  "common.redo": "重做",
+  "common.selectAll": "全选",
+  "common.find": "查找…",
+  "common.newFile": "新建文件",
+  "common.newDirectory": "新建文件夹",
+  "common.copyPath": "复制路径",
+  "common.closeOthers": "关闭其他标签",
+  "common.closeAll": "关闭全部",
+  "common.copyLog": "复制日志",
+  "common.clearLog": "清空日志",
+  "common.runBuild": "执行构建",
+  "common.minimize": "最小化",
+  "common.maximize": "最大化 / 还原",
+  "common.zoomIn": "放大界面",
+  "common.zoomOut": "缩小界面",
+  "common.resetZoom": "恢复默认缩放",
+  "common.language": "语言",
+
+  "menu.file": "文件",
+  "menu.file.new": "新建 Mini App 项目…",
+  "menu.file.open": "打开…",
+  "menu.file.closeProject": "关闭项目",
+  "menu.edit": "编辑",
+  "menu.view": "视图",
+  "menu.view.toolWindows": "工具窗口 ›",
+  "menu.view.appearance": "外观 ›",
+  "menu.navigate": "导航",
+  "menu.navigate.searchEverywhere": "全局搜索",
+  "menu.code": "代码",
+  "menu.code.overrideMethods": "重写方法…",
+  "menu.analyze": "分析",
+  "menu.analyze.inspectCode": "代码检查…",
+  "menu.refactor": "重构",
+  "menu.refactor.rename": "重命名…",
+  "menu.build": "构建",
+  "menu.build.zip": "打包 Mini App（ZIP）",
+  "menu.build.rebuild": "重新构建项目",
+  "menu.run": "运行",
+  "menu.run.app": "运行 'app'",
+  "menu.run.preview": "在 IDE 中预览",
+  "menu.tools": "工具",
+  "menu.tools.sdkManager": "SDK 管理器…",
+  "menu.vcs": "版本控制",
+  "menu.vcs.createRepo": "创建 Git 仓库…",
+  "menu.window": "窗口",
+  "menu.window.restoreLayout": "恢复默认布局",
+  "menu.help": "帮助",
+  "menu.help.about": "关于 QChat Mini App Studio",
+  "about.text": "QChat Mini App Studio 1.0 — Tauri + TypeScript",
+
+  "toolbar.run": "运行 'app'（构建 + 预览）",
+  "toolbar.debug": "调试 'app'（即将推出）",
+  "toolbar.buildZip": "打包 Mini App（ZIP）",
+  "toolbar.preview": "QChat Mini App 预览",
+  "toolbar.searchEverywhere": "全局搜索",
+  "toolbar.sdk": "Mini App SDK 1.0.0",
+
+  "welcome.nav.projects": "项目",
+  "welcome.nav.customize": "自定义",
+  "welcome.nav.plugins": "插件",
+  "welcome.nav.learn": "学习",
+  "welcome.version": "版本 1.0.0 · Tauri + TypeScript",
+  "welcome.newProject": "新建项目",
+  "welcome.open": "打开",
+  "welcome.recent": "最近的项目",
+  "welcome.noRecent": "暂无最近项目。创建你的第一个 QChat Mini App。",
+  "welcome.removeRecent": "从列表移除",
+  "welcome.card1.title": "Mini App 格式",
+  "welcome.card1.desc": "React + Vite，内置 @qchat/miniapp-sdk，qchat.manifest.json",
+  "welcome.card2.title": "一键构建",
+  "welcome.card2.desc": "npm install → vite build → 在 release/ 中打包 ZIP",
+  "welcome.card3.title": "实时预览",
+  "welcome.card3.desc": "在模拟 WebView 中注入 QChatNative 模拟桥",
+  "welcome.footer": "构建 QChat Mini App（React + Vite），并打包为不可变的 ZIP 供 QChat 运行时使用。",
+
+  "tree.title": "项目",
+  "tree.subtitle": "Mini App",
+  "tree.noProject": "未打开项目",
+  "tree.collapseAll": "全部折叠",
+  "tree.refresh": "刷新",
+  "tree.fileNamePrompt": "文件名：",
+  "tree.dirNamePrompt": "文件夹名：",
+  "tree.deleteConfirm": "删除 {path}？",
+
+  "bottom.tab.build": "构建",
+  "bottom.tab.run": "运行",
+  "bottom.tab.preview": "预览",
+  "bottom.tab.terminal": "终端",
+  "bottom.buildHint": "构建输出会显示在这里。点击运行或构建即可打包 Mini App 的 ZIP。",
+  "bottom.building": "正在构建…",
+  "bottom.buildSucceeded": "构建成功。",
+  "bottom.buildFailed": "构建失败，请查看上方日志。",
+  "bottom.package": "安装包：{path}",
+  "bottom.runHint": "使用“预览”标签，在模拟的 QChat WebView 中运行已构建的 Mini App。",
+  "bottom.terminalHint": "构建与预览命令都在应用内 / 后台运行，不会弹出任何控制台窗口；输出全部汇入“构建”标签。安装包自带 Node.js 运行时时会优先使用它。",
+  "bottom.previewNone": "暂无预览。请先构建项目，然后点击运行。",
+  "bottom.previewReload": "重新加载",
+  "bottom.previewDevice": "QChat WebView · Android 14 · 390 × 844 · 已注入模拟桥",
+  "bottom.previewSettings": "预览设置",
+  "bottom.previewZoom": "缩放",
+  "bottom.mockBridgeNote": "模拟桥实现了 getAppInfo、getSystemInfo、showToast、storage、chooseImage、share 和 request。",
+
+  "status.building": "正在构建…",
+
+  "manifest.title": "Mini App Manifest",
+  "manifest.appName": "应用名称",
+  "manifest.appId": "App ID",
+  "manifest.version": "版本",
+  "manifest.description": "描述",
+  "manifest.permissions": "权限",
+  "manifest.apply": "写入 qchat.manifest.json",
+  "manifest.note": "修改会写入 qchat.manifest.json。ZIP 打包器会在构建时校验 appId 与 version。",
+
+  "newProject.title": "新建 QChat Mini App 项目",
+  "newProject.appName": "应用名称",
+  "newProject.appId": "App ID（来自开发者中心，格式 mp_...）",
+  "newProject.description": "描述",
+  "newProject.version": "版本（semver）",
+  "newProject.location": "位置",
+  "newProject.locationPlaceholder": "选择文件夹…",
+  "newProject.permissions": "申请的权限",
+  "newProject.regenerate": "重新生成",
+  "newProject.errName": "请输入项目名称",
+  "newProject.errLocation": "请选择父目录",
+  "newProject.errAppId": "App ID 必须为 mp_<12-24 位十六进制字符>",
+
+  "editor.noTabs": "未打开任何文件",
+  "editor.emptyHint": "从项目树中打开文件，或创建新项目",
+  "editor.tip": "提示：按 Ctrl+S 保存 · 连按两次 Shift 搜索",
+
+  "toast.fileSaved": "已保存文件",
+  "toast.allSaved": "已保存全部文件",
+  "toast.opened": "已打开 {name}",
+  "toast.manifestUpdated": "已更新 manifest",
+  "toast.buildSucceeded": "构建成功",
+  "toast.buildFailed": "构建失败",
+  "toast.previewStarted": "预览已启动",
+  "toast.structureSoon": "结构视图即将推出",
+  "toast.gitSoon": "Git 集成即将推出",
+};
+
+const DICTS: Record<Lang, Record<I18nKey, string>> = { vi, en, zh };
+
+const LANG_KEY = "qchat.lang";
+
+type I18nApi = {
+  lang: Lang;
+  setLang: (l: Lang) => void;
+  /** Translate `key`, interpolating `{placeholder}` values from `vars`. */
+  t: (key: I18nKey, vars?: Record<string, string | number>) => string;
+};
+
+const Ctx = createContext<I18nApi | null>(null);
+
+export function useI18n(): I18nApi {
+  const api = useContext(Ctx);
+  if (!api) throw new Error("useI18n must be used inside <I18nProvider>");
+  return api;
+}
+
+export function I18nProvider({ children }: { children: ReactNode }) {
+  const [lang, setLangState] = useState<Lang>(() => {
+    try {
+      const saved = window.localStorage.getItem(LANG_KEY) as Lang | null;
+      if (saved && saved in DICTS) return saved;
+    } catch {
+      /* storage unavailable */
+    }
+    return "vi"; // Tiếng Việt là ngôn ngữ chính
+  });
+
+  useEffect(() => {
+    try {
+      window.localStorage.setItem(LANG_KEY, lang);
+    } catch {
+      /* storage unavailable */
+    }
+    // Keep the webview's own language (spellcheck, native dialogs) in sync.
+    document.documentElement.lang = lang;
+  }, [lang]);
+
+  const t = useCallback<I18nApi["t"]>(
+    (key, vars) => {
+      // Fall back to Vietnamese so a missing translation never shows a raw key.
+      const raw = DICTS[lang][key] ?? DICTS.vi[key] ?? key;
+      if (!vars) return raw;
+      return raw.replace(/\{(\w+)\}/g, (_, name: string) =>
+        name in vars ? String(vars[name]) : `{${name}}`,
+      );
+    },
+    [lang],
+  );
+
+  const value = useMemo<I18nApi>(() => ({ lang, setLang: setLangState, t }), [lang, t]);
+  return <Ctx.Provider value={value}>{children}</Ctx.Provider>;
+}
