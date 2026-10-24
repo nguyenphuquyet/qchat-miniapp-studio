@@ -12,13 +12,13 @@ use tauri::{AppHandle, Emitter, State};
 
 use crate::templates::MOCK_BRIDGE_JS;
 
-#[derive(Serialize)]
+#[derive(Clone, Serialize)]
 struct BuildLog {
     stream: String,
     line: String,
 }
 
-#[derive(Serialize)]
+#[derive(Clone, Serialize)]
 struct BuildDone {
     success: bool,
     message: String,
