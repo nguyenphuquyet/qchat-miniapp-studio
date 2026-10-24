@@ -23,6 +23,31 @@ export type OpenFile = {
 
 export type BottomTab = "build" | "run" | "preview" | "terminal";
 
+/**
+ * UI zoom: `--ui-scale` multiplies the `html` font size, and every rem-based
+ * Tailwind size (text, spacing, icon boxes) follows it. Defaults to 1.15 because
+ * a 100% desktop UI reads too small on high-DPI screens.
+ */
+const UI_SCALE_KEY = "qchat.uiScale";
+const UI_SCALE_DEFAULT = 1.15;
+const UI_SCALE_MIN = 0.85;
+const UI_SCALE_MAX = 1.8;
+const UI_SCALE_STEP = 0.05;
+
+function clampScale(n: number) {
+  return Math.min(UI_SCALE_MAX, Math.max(UI_SCALE_MIN, Math.round(n * 100) / 100));
+}
+
+function readStoredScale() {
+  try {
+    const saved = Number(window.localStorage.getItem(UI_SCALE_KEY));
+    if (Number.isFinite(saved) && saved >= UI_SCALE_MIN && saved <= UI_SCALE_MAX) return clampScale(saved);
+  } catch {
+    /* storage unavailable */
+  }
+  return UI_SCALE_DEFAULT;
+}
+
 type StudioState = {
   project: ProjectInfo | null;
   tree: FileNode | null;
@@ -38,6 +63,7 @@ type StudioState = {
   cursor: { line: number; col: number };
   dialog: null | "new" | "open";
   toast: string | null;
+  uiScale: number;
   loadRecent: () => void;
   doOpenProject: (path: string) => Promise<void>;
   doCreateProject: (args: CreateProjectArgs) => Promise<void>;
@@ -53,6 +79,10 @@ type StudioState = {
   runPreview: () => Promise<void>;
   setBottomTab: (t: BottomTab) => void;
   setRightOpen: (v: boolean) => void;
+  setUiScale: (n: number) => void;
+  zoomIn: () => void;
+  zoomOut: () => void;
+  resetZoom: () => void;
   setCursor: (line: number, col: number) => void;
   setDialog: (d: null | "new" | "open") => void;
   showToast: (msg: string) => void;
@@ -85,7 +115,41 @@ export function StudioProvider({ children }: { children: React.ReactNode }) {
   const [cursor, setCursor] = useState({ line: 1, col: 1 });
   const [dialog, setDialog] = useState<null | "new" | "open">(null);
   const [toast, setToast] = useState<string | null>(null);
+  const [uiScale, setUiScale] = useState(readStoredScale);
   const toastTimer = useRef<number | null>(null);
+
+  // Apply + persist the UI zoom. `--ui-scale` is consumed by `html` in index.css.
+  useEffect(() => {
+    document.documentElement.style.setProperty("--ui-scale", String(uiScale));
+    try {
+      window.localStorage.setItem(UI_SCALE_KEY, String(uiScale));
+    } catch {
+      /* storage unavailable */
+    }
+  }, [uiScale]);
+
+  const zoomIn = useCallback(() => setUiScale((s) => clampScale(s + UI_SCALE_STEP)), []);
+  const zoomOut = useCallback(() => setUiScale((s) => clampScale(s - UI_SCALE_STEP)), []);
+  const resetZoom = useCallback(() => setUiScale(UI_SCALE_DEFAULT), []);
+
+  // Ctrl/Cmd + `+` / `-` / `0` — the shortcuts an IDE user expects.
+  useEffect(() => {
+    const onKey = (e: KeyboardEvent) => {
+      if (!(e.ctrlKey || e.metaKey) || e.altKey) return;
+      if (e.key === "=" || e.key === "+") {
+        e.preventDefault();
+        zoomIn();
+      } else if (e.key === "-" || e.key === "_") {
+        e.preventDefault();
+        zoomOut();
+      } else if (e.key === "0") {
+        e.preventDefault();
+        resetZoom();
+      }
+    };
+    window.addEventListener("keydown", onKey);
+    return () => window.removeEventListener("keydown", onKey);
+  }, [zoomIn, zoomOut, resetZoom]);
 
   const showToast = useCallback((msg: string) => {
     setToast(msg);
@@ -311,10 +375,12 @@ export function StudioProvider({ children }: { children: React.ReactNode }) {
 
   const value: StudioState = {
     project, tree, recent, openFiles, activePath, buildLogs, buildRunning, buildResult,
-    previewUrl, bottomTab, rightOpen, cursor, dialog, toast,
+    previewUrl, bottomTab, rightOpen, cursor, dialog, toast, uiScale,
     loadRecent, doOpenProject, doCreateProject, closeProject, refreshTree,
     openFile: openFilePath, closeTab, setActive, updateContent, saveFile, saveAll,
     runBuild, runPreview, setBottomTab, setRightOpen,
+    setUiScale: (n: number) => setUiScale(clampScale(n)),
+    zoomIn, zoomOut, resetZoom,
     setCursor: (line: number, col: number) => setCursor({ line, col }),
     setDialog, showToast,
     deleteFile, newFile, updateManifest,

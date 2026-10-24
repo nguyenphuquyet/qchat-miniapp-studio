@@ -98,7 +98,12 @@ export default function BottomPanel({ onHide }: { onHide: () => void }) {
         {s.bottomTab === "terminal" && (
           <div className="p-3 text-2xs text-darcula-text font-mono">
             <div><span className="text-darcula-green">user@qchat-studio</span>:<span className="text-darcula-accent">~/project</span>$ _</div>
-            <div className="text-darcula-dim mt-2">Integrated terminal — type commands here (placeholder).</div>
+            <div className="text-darcula-dim mt-2">
+              Build and preview commands run <span className="text-darcula-accent">inside the app / in the background</span> —
+              no external console window is opened. Everything they print streams into the{" "}
+              <span className="text-darcula-accent">Build</span> tab, and the studio uses its bundled Node.js runtime
+              when one is shipped with the installer.
+            </div>
           </div>
         )}
 

@@ -106,7 +106,7 @@ export default function NewProjectDialog() {
           <button className="px-4 py-1.5 rounded bg-darcula-green hover:bg-emerald-600 text-white text-2xs font-medium" onClick={create}>Create</button>
         </div>
       </div>
-      <style>{`.inp{width:100%;background:#2b2b2b;border:1px solid #4b4f52;border-radius:4px;padding:6px 10px;color:#e8eef7;font-size:12px;outline:none}.inp:focus{border-color:#4e94ce}.btn{display:inline-flex;align-items:center;justify-content:center;padding:6px 10px;background:#3c3f41;border:1px solid #4b4f52;border-radius:4px;color:#bbbbbb;cursor:pointer}.btn:hover{background:#4b4f52}`}</style>
+      <style>{`.inp{width:100%;background:#2b2b2b;border:1px solid #4b4f52;border-radius:4px;padding:6px 10px;color:#e8eef7;font-size:0.75rem;outline:none}.inp:focus{border-color:#4e94ce}.btn{display:inline-flex;align-items:center;justify-content:center;padding:6px 10px;background:#3c3f41;border:1px solid #4b4f52;border-radius:4px;color:#bbbbbb;cursor:pointer}.btn:hover{background:#4b4f52}`}</style>
     </div>
   );
 }

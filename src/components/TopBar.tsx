@@ -1,23 +1,48 @@
-import { useState } from "react";
+import { useEffect, useState, type MouseEvent as ReactMouseEvent } from "react";
 import {
   Play, Bug, Hammer, ChevronDown, Search, Settings, Minus, X, Square,
   FolderOpen, FilePlus2, Save, SaveAll, Undo2, Redo2, FileCode2, Smartphone,
+  ZoomIn, ZoomOut,
 } from "lucide-react";
 import { useStudio } from "../lib/store";
 
 const isTauri = typeof window !== "undefined" && "__TAURI_INTERNALS__" in window;
 
-async function winAction(action: "minimize" | "toggleMaximize" | "close") {
-  if (!isTauri) return;
+type WinAction = "minimize" | "toggleMaximize" | "close" | "startDragging";
+
+/**
+ * Cached handle to the current Tauri window.
+ *
+ * The window handle is imported lazily (kept out of the browser-only bundle path)
+ * but the resulting promise is memoised and warmed on mount, so `startDragging()`
+ * can fire during the very mousedown that asked for it — otherwise the title bar
+ * feels unresponsive while the module is still loading.
+ */
+let winPromise: Promise<import("@tauri-apps/api/window").Window> | null = null;
+
+function currentWindow() {
+  if (!isTauri) return null;
+  winPromise ??= import("@tauri-apps/api/window").then((m) => m.getCurrentWindow());
+  return winPromise;
+}
+
+async function winAction(action: WinAction) {
+  const pending = currentWindow();
+  if (!pending) return;
   try {
-    const { getCurrentWindow } = await import("@tauri-apps/api/window");
-    const w = getCurrentWindow();
+    const w = await pending;
     if (action === "minimize") await w.minimize();
     if (action === "toggleMaximize") await w.toggleMaximize();
     if (action === "close") await w.close();
+    if (action === "startDragging") await w.startDragging();
   } catch {
     /* noop in browser */
   }
+}
+
+/** True when the event landed on (or inside) an element marked `.no-drag`. */
+function isInteractive(target: EventTarget | null) {
+  return target instanceof Element && target.closest(".no-drag") !== null;
 }
 
 const MENUS: Record<string, { label: string; icon?: any; action?: string; sep?: boolean }[]> = {
@@ -60,6 +85,27 @@ export default function TopBar() {
   const s = useStudio();
   const [openMenu, setOpenMenu] = useState<string | null>(null);
 
+  // Warm the window handle so the first title-bar drag reacts immediately.
+  useEffect(() => {
+    void currentWindow()?.catch(() => undefined);
+  }, []);
+
+  /**
+   * Window dragging. Tauri ignores Electron's `-webkit-app-region: drag`, so the
+   * drag has to be started from JS on mousedown. Anything marked `.no-drag`
+   * (window buttons, menu entries) keeps its normal click behaviour.
+   */
+  const onTitleBarMouseDown = (e: ReactMouseEvent<HTMLDivElement>) => {
+    if (e.button !== 0 || isInteractive(e.target)) return;
+    e.preventDefault();
+    void winAction("startDragging");
+  };
+
+  const onTitleBarDoubleClick = (e: ReactMouseEvent<HTMLDivElement>) => {
+    if (isInteractive(e.target)) return;
+    void winAction("toggleMaximize");
+  };
+
   const runAction = (action?: string) => {
     setOpenMenu(null);
     if (!action) return;
@@ -80,10 +126,14 @@ export default function TopBar() {
 
   return (
     <div className="flex flex-col bg-darcula-bg border-b border-black/40 select-none">
-      {/* Title bar */}
-      <div className="drag-region flex items-center h-9 px-2 text-2xs text-darcula-dim">
+      {/* Title bar (custom-drawn: the window is created with `decorations: false`) */}
+      <div
+        className="drag-region flex items-center h-9 px-2 text-2xs text-darcula-dim"
+        onMouseDown={onTitleBarMouseDown}
+        onDoubleClick={onTitleBarDoubleClick}
+      >
         <div className="no-drag flex items-center gap-2 w-48">
-          <div className="w-5 h-5 rounded-md bg-gradient-to-br from-emerald-400 to-emerald-800 grid place-items-center text-white text-[10px] font-bold font-mono">{"</>"}</div>
+          <div className="w-5 h-5 rounded-md bg-gradient-to-br from-emerald-400 to-emerald-800 grid place-items-center text-white text-[0.625rem] font-bold font-mono">{"</>"}</div>
           <span className="text-darcula-text font-medium">QChat Mini App Studio</span>
         </div>
         <div className="flex-1 text-center truncate px-4">
@@ -128,8 +178,31 @@ export default function TopBar() {
           </div>
         ))}
         <div className="flex-1" />
-        <div className="flex items-center gap-1 text-darcula-dim">
-          <Settings size={13} className="hover:text-white cursor-pointer" />
+        <div className="flex items-center gap-0.5 text-darcula-dim">
+          <button
+            onClick={s.zoomOut}
+            disabled={s.uiScale <= 0.85}
+            title="Thu nhỏ giao diện (Ctrl+-)"
+            className="p-1 rounded hover:bg-white/10 disabled:opacity-40"
+          >
+            <ZoomOut size={13} />
+          </button>
+          <button
+            onClick={s.resetZoom}
+            title="Cỡ giao diện mặc định (Ctrl+0)"
+            className="w-9 text-[0.625rem] tabular-nums hover:text-white"
+          >
+            {Math.round(s.uiScale * 100)}%
+          </button>
+          <button
+            onClick={s.zoomIn}
+            disabled={s.uiScale >= 1.8}
+            title="Phóng to giao diện (Ctrl+=)"
+            className="p-1 rounded hover:bg-white/10 disabled:opacity-40"
+          >
+            <ZoomIn size={13} />
+          </button>
+          <Settings size={13} className="ml-1 hover:text-white cursor-pointer" />
         </div>
       </div>
 
@@ -173,7 +246,7 @@ export default function TopBar() {
         <div className="flex items-center gap-2 px-2.5 py-1 rounded bg-darcula-editor border border-white/5 text-darcula-dim text-2xs w-64">
           <Search size={12} />
           <span className="flex-1">Search Everywhere</span>
-          <kbd className="px-1 rounded bg-white/10 text-[10px]">⇧⇧</kbd>
+          <kbd className="px-1 rounded bg-white/10 text-[0.625rem]">⇧⇧</kbd>
         </div>
         <div className="w-7 h-7 rounded-full bg-gradient-to-br from-emerald-400 to-teal-600 grid place-items-center text-white text-xs font-bold ml-1">Q</div>
       </div>

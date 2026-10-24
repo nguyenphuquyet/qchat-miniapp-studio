@@ -32,7 +32,8 @@ export default {
         mono: ['"JetBrains Mono"', '"Fira Code"', "Consolas", "monospace"],
       },
       fontSize: {
-        "2xs": ["11px", "14px"],
+        // rem-based so the UI zoom (--ui-scale) scales these too.
+        "2xs": ["0.6875rem", "0.875rem"], // 11px / 14px at 100%
       },
     },
   },
