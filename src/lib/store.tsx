@@ -64,6 +64,7 @@ type StudioState = {
   dialog: null | "new" | "open";
   toast: string | null;
   uiScale: number;
+  clearBuildLogs: () => void;
   loadRecent: () => void;
   doOpenProject: (path: string) => Promise<void>;
   doCreateProject: (args: CreateProjectArgs) => Promise<void>;
@@ -301,6 +302,11 @@ export function StudioProvider({ children }: { children: React.ReactNode }) {
     showToast("All files saved");
   }, [openFiles, showToast]);
 
+  const clearBuildLogs = useCallback(() => {
+    setBuildLogs([]);
+    setBuildResult(null);
+  }, []);
+
   const runBuild = useCallback(async () => {
     if (!project || buildRunning) return;
     await saveAll();
@@ -378,7 +384,7 @@ export function StudioProvider({ children }: { children: React.ReactNode }) {
     previewUrl, bottomTab, rightOpen, cursor, dialog, toast, uiScale,
     loadRecent, doOpenProject, doCreateProject, closeProject, refreshTree,
     openFile: openFilePath, closeTab, setActive, updateContent, saveFile, saveAll,
-    runBuild, runPreview, setBottomTab, setRightOpen,
+    runBuild, runPreview, setBottomTab, setRightOpen, clearBuildLogs,
     setUiScale: (n: number) => setUiScale(clampScale(n)),
     zoomIn, zoomOut, resetZoom,
     setCursor: (line: number, col: number) => setCursor({ line, col }),

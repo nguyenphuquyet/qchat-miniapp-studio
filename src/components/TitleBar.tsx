@@ -2,6 +2,7 @@ import { useEffect, type MouseEvent as ReactMouseEvent } from "react";
 import { Minus, X, Square, ZoomIn, ZoomOut } from "lucide-react";
 import { useStudio } from "../lib/store";
 import { isInteractive, warmWindow, winAction } from "../lib/window";
+import { useContextMenu } from "./ContextMenu";
 import logo from "../assets/logo.png";
 
 /**
@@ -13,6 +14,7 @@ import logo from "../assets/logo.png";
  */
 export default function TitleBar({ title }: { title?: string }) {
   const s = useStudio();
+  const ctx = useContextMenu();
 
   // Warm the window handle so the first title-bar drag reacts immediately.
   useEffect(() => {
@@ -35,11 +37,26 @@ export default function TitleBar({ title }: { title?: string }) {
     void winAction("toggleMaximize");
   };
 
+  /** Frameless window: right-clicking the frame offers the window commands. */
+  const onContextMenu = (e: ReactMouseEvent<HTMLDivElement>) => {
+    ctx.open(e, [
+      { label: "Minimize", icon: <Minus size={12} />, action: () => void winAction("minimize") },
+      { label: "Maximize / Restore", icon: <Square size={11} />, action: () => void winAction("toggleMaximize") },
+      { separator: true },
+      { label: "Zoom In", icon: <ZoomIn size={12} />, disabled: s.uiScale >= 1.8, action: s.zoomIn },
+      { label: "Zoom Out", icon: <ZoomOut size={12} />, disabled: s.uiScale <= 0.85, action: s.zoomOut },
+      { label: "Reset Zoom", shortcut: "Ctrl+0", action: s.resetZoom },
+      { separator: true },
+      { label: "Close", icon: <X size={12} />, danger: true, action: () => void winAction("close") },
+    ]);
+  };
+
   return (
     <div
       className="drag-region flex items-center h-9 px-2 shrink-0 bg-darcula-bg border-b border-black/40 select-none text-2xs text-darcula-dim"
       onMouseDown={onMouseDown}
       onDoubleClick={onDoubleClick}
+      onContextMenu={onContextMenu}
     >
       <div className="no-drag flex items-center gap-2 w-48">
         <img src={logo} alt="QChat Mini App Studio" className="w-5 h-5 rounded-md object-cover" />

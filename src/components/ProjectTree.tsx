@@ -1,10 +1,14 @@
 import { useState } from "react";
 import {
-  Folder, FolderOpen, ChevronRight, FileCode2, FileJson, FileText,
+  Folder, FolderOpen, ChevronRight, FileCode2, FileText,
   Braces, Palette, Globe, ScrollText, FilePlus2, FolderPlus, Trash2, RefreshCw,
+  ClipboardCopy, FileCode,
 } from "lucide-react";
 import { useStudio } from "../lib/store";
 import { api, type FileNode } from "../lib/api";
+import { useContextMenu } from "./ContextMenu";
+import { copyText } from "../lib/clipboard";
+import type { MouseEvent as ReactMouseEvent } from "react";
 
 function fileIcon(name: string) {
   if (name.endsWith(".tsx") || name.endsWith(".ts") || name.endsWith(".js") || name.endsWith(".mjs"))
@@ -19,10 +23,53 @@ function fileIcon(name: string) {
 
 function TreeNode({ node, depth }: { node: FileNode; depth: number }) {
   const s = useStudio();
+  const ctx = useContextMenu();
   const [open, setOpen] = useState(depth < 2);
-  const [menu, setMenu] = useState<{ x: number; y: number } | null>(null);
   const isActive = s.activePath === node.path;
   const isOpenFile = s.openFiles.some((f) => f.path === node.path);
+
+  /** Project-tree menu — replaces the WebView's own right-click menu. */
+  const onContextMenu = (e: ReactMouseEvent) => {
+    const items = node.is_dir
+      ? [
+          {
+            label: "New File",
+            icon: <FilePlus2 size={12} />,
+            action: () => {
+              const n = prompt("File name:");
+              if (n) void s.newFile(node.path, n);
+            },
+          },
+          {
+            label: "New Directory",
+            icon: <FolderPlus size={12} />,
+            action: () => {
+              const n = prompt("Directory name:");
+              if (n) void api.createDirectory(node.path + "/" + n).then(() => s.refreshTree());
+            },
+          },
+          { separator: true as const },
+        ]
+      : [
+          { label: "Open", icon: <FileCode size={12} />, action: () => void s.openFile(node.path) },
+          { separator: true as const },
+        ];
+
+    ctx.open(e, [
+      ...items,
+      { label: "Copy Path", icon: <ClipboardCopy size={12} />, action: () => void copyText(node.path) },
+      { label: "Reload", icon: <RefreshCw size={12} />, action: () => s.refreshTree() },
+      { separator: true },
+      {
+        label: "Delete",
+        icon: <Trash2 size={12} />,
+        danger: true,
+        action: () => {
+          if (confirm(`Delete ${node.path}?`)) void s.deleteFile(node.path);
+        },
+      },
+    ]);
+  };
 
   if (node.is_dir) {
     return (
@@ -31,16 +78,13 @@ function TreeNode({ node, depth }: { node: FileNode; depth: number }) {
           className={`flex items-center gap-1 px-1 py-[3px] cursor-pointer hover:bg-white/5 ${isActive ? "bg-darcula-selectInactive" : ""}`}
           style={{ paddingLeft: 4 + depth * 12 }}
           onClick={() => setOpen(!open)}
-          onContextMenu={(e) => { e.preventDefault(); setMenu({ x: e.clientX, y: e.clientY }); }}
+          onContextMenu={onContextMenu}
         >
           <ChevronRight size={12} className={`text-darcula-dim transition-transform ${open ? "rotate-90" : ""}`} />
           {open ? <FolderOpen size={14} className="text-darcula-accent" /> : <Folder size={14} className="text-darcula-accent" />}
           <span className="text-2xs text-darcula-text truncate">{node.name}</span>
         </div>
         {open && node.children.map((c) => <TreeNode key={c.path} node={c} depth={depth + 1} />)}
-        {menu && (
-          <ContextMenu x={menu.x} y={menu.y} onClose={() => setMenu(null)} dir={node.path} />
-        )}
       </div>
     );
   }
@@ -50,7 +94,7 @@ function TreeNode({ node, depth }: { node: FileNode; depth: number }) {
       className={`flex items-center gap-1 px-1 py-[3px] cursor-pointer hover:bg-white/5 ${isActive ? "bg-darcula-select text-white" : ""}`}
       style={{ paddingLeft: 20 + depth * 12 }}
       onClick={() => s.openFile(node.path)}
-      onContextMenu={(e) => { e.preventDefault(); setMenu({ x: e.clientX, y: e.clientY }); }}
+      onContextMenu={onContextMenu}
     >
       <span className="w-3" />
       {fileIcon(node.name)}
@@ -58,38 +102,7 @@ function TreeNode({ node, depth }: { node: FileNode; depth: number }) {
       {s.openFiles.find((f) => f.path === node.path)?.dirty && (
         <span className="ml-auto w-1.5 h-1.5 rounded-full bg-darcula-modified" />
       )}
-      {menu && <ContextMenu x={menu.x} y={menu.y} onClose={() => setMenu(null)} file={node.path} />}
     </div>
-  );
-}
-
-function ContextMenu({ x, y, onClose, file, dir }: { x: number; y: number; onClose: () => void; file?: string; dir?: string }) {
-  const s = useStudio();
-  const target = file ?? dir!;
-  return (
-    <>
-      <div className="fixed inset-0 z-40" onClick={onClose} onContextMenu={(e) => { e.preventDefault(); onClose(); }} />
-      <div className="fixed z-50 min-w-[160px] bg-darcula-panel border border-black/60 rounded-sm shadow-2xl py-1 text-2xs text-darcula-text" style={{ left: x, top: y }}>
-        {dir && (
-          <>
-            <button className="w-full flex items-center gap-2 px-3 py-1.5 hover:bg-darcula-hover hover:text-white text-left" onClick={() => { const n = prompt("File name:"); if (n) s.newFile(dir, n); onClose(); }}>
-              <FilePlus2 size={12} /> New File
-            </button>
-            <button className="w-full flex items-center gap-2 px-3 py-1.5 hover:bg-darcula-hover hover:text-white text-left" onClick={() => { const n = prompt("Directory name:"); if (n) { api.createDirectory(dir + "/" + n).then(() => s.refreshTree()); } onClose(); }}>
-              <FolderPlus size={12} /> New Directory
-            </button>
-            <div className="h-px bg-white/10 my-1" />
-          </>
-        )}
-        <button className="w-full flex items-center gap-2 px-3 py-1.5 hover:bg-darcula-hover hover:text-white text-left" onClick={() => { s.refreshTree(); onClose(); }}>
-          <RefreshCw size={12} /> Reload
-        </button>
-        <div className="h-px bg-white/10 my-1" />
-        <button className="w-full flex items-center gap-2 px-3 py-1.5 hover:bg-red-500/80 hover:text-white text-left text-red-400" onClick={() => { if (confirm(`Delete ${target}?`)) s.deleteFile(target); onClose(); }}>
-          <Trash2 size={12} /> Delete
-        </button>
-      </div>
-    </>
   );
 }
 

@@ -10,6 +10,7 @@ import { css } from "@codemirror/lang-css";
 import { autocompletion, closeBrackets, closeBracketsKeymap, completionKeymap } from "@codemirror/autocomplete";
 import { searchKeymap, highlightSelectionMatches } from "@codemirror/search";
 import { tags as t } from "@lezer/highlight";
+import { setActiveEditor, getActiveEditor } from "../lib/editorBridge";
 
 const darculaHighlight = HighlightStyle.define([
   { tag: t.keyword, color: "#CC7832" },
@@ -153,10 +154,12 @@ export default function CodeEditor({ content, language, onChange, onCursor, onSa
     });
     const view = new EditorView({ state, parent: hostRef.current });
     viewRef.current = view;
+    setActiveEditor(view);
     // initial cursor
     const line = view.state.doc.lineAt(0);
     onCursorRef.current(1, 1);
     return () => {
+      if (getActiveEditor() === view) setActiveEditor(null);
       view.destroy();
       viewRef.current = null;
     };

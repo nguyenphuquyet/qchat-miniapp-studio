@@ -1,10 +1,13 @@
 import { useEffect, useRef, useState } from "react";
 import {
   Hammer, Play, TerminalSquare, Smartphone, ChevronUp, X, CheckCircle2,
-  XCircle, Loader2, Package, ExternalLink,
+  XCircle, Loader2, Package, ExternalLink, ClipboardCopy, Eraser,
 } from "lucide-react";
 import { useStudio } from "../lib/store";
 import type { BottomTab } from "../lib/store";
+import { useContextMenu } from "./ContextMenu";
+import { copyText } from "../lib/clipboard";
+import type { MouseEvent as ReactMouseEvent } from "react";
 
 const TABS: { id: BottomTab; label: string; icon: any }[] = [
   { id: "build", label: "Build", icon: Hammer },
@@ -15,12 +18,38 @@ const TABS: { id: BottomTab; label: string; icon: any }[] = [
 
 export default function BottomPanel({ onHide }: { onHide: () => void }) {
   const s = useStudio();
+  const ctx = useContextMenu();
   const logRef = useRef<HTMLDivElement>(null);
   const [phoneScale, setPhoneScale] = useState(1);
 
   useEffect(() => {
     if (logRef.current) logRef.current.scrollTop = logRef.current.scrollHeight;
   }, [s.buildLogs, s.bottomTab]);
+
+  /** Right-click in the build/terminal panes: copy or clear the log. */
+  const onLogContextMenu = (e: ReactMouseEvent) => {
+    ctx.open(e, [
+      {
+        label: "Copy Log",
+        icon: <ClipboardCopy size={12} />,
+        disabled: s.buildLogs.length === 0,
+        action: () => void copyText(s.buildLogs.map((l) => l.line).join("\n")),
+      },
+      {
+        label: "Clear Log",
+        icon: <Eraser size={12} />,
+        disabled: s.buildLogs.length === 0 && !s.buildResult,
+        action: s.clearBuildLogs,
+      },
+      { separator: true },
+      {
+        label: "Run Build",
+        icon: <Hammer size={12} />,
+        disabled: !s.project || s.buildRunning,
+        action: () => void s.runBuild(),
+      },
+    ]);
+  };
 
   return (
     <div className="h-full flex flex-col bg-darcula-panel border-t border-black/40">
@@ -56,7 +85,7 @@ export default function BottomPanel({ onHide }: { onHide: () => void }) {
 
       <div className="flex-1 min-h-0 overflow-hidden">
         {s.bottomTab === "build" && (
-          <div ref={logRef} className="h-full overflow-auto p-2 font-mono text-2xs leading-relaxed">
+          <div ref={logRef} className="h-full overflow-auto p-2 font-mono text-2xs leading-relaxed" onContextMenu={onLogContextMenu}>
             {s.buildLogs.length === 0 && !s.buildRunning && (
               <div className="text-darcula-dim">Build output will appear here. Click <span className="text-darcula-green">Run</span> or <span className="text-darcula-accent">Build</span> to package the Mini App ZIP.</div>
             )}
@@ -96,7 +125,7 @@ export default function BottomPanel({ onHide }: { onHide: () => void }) {
         )}
 
         {s.bottomTab === "terminal" && (
-          <div className="p-3 text-2xs text-darcula-text font-mono">
+          <div className="p-3 text-2xs text-darcula-text font-mono" onContextMenu={onLogContextMenu}>
             <div><span className="text-darcula-green">user@qchat-studio</span>:<span className="text-darcula-accent">~/project</span>$ _</div>
             <div className="text-darcula-dim mt-2">
               Build and preview commands run <span className="text-darcula-accent">inside the app / in the background</span> —

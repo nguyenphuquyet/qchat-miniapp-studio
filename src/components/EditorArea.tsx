@@ -1,7 +1,15 @@
 import { X, ChevronRight, FileCode2 } from "lucide-react";
+import type { MouseEvent as ReactMouseEvent } from "react";
 import { useStudio } from "../lib/store";
 import { fileLanguage } from "../lib/api";
 import CodeEditor from "./CodeEditor";
+import { useContextMenu } from "./ContextMenu";
+import { copyText } from "../lib/clipboard";
+import { getActiveEditor } from "../lib/editorBridge";
+import {
+  editorCopy, editorCut, editorFind, editorPaste, editorRedo, editorSelectAll, editorUndo,
+  hasEditorSelection,
+} from "../lib/editorActions";
 
 function tabIcon(name: string) {
   return <FileCode2 size={13} className={name.endsWith(".json") ? "text-darcula-yellow" : "text-darcula-blue"} />;
@@ -9,11 +17,52 @@ function tabIcon(name: string) {
 
 export default function EditorArea() {
   const s = useStudio();
+  const ctx = useContextMenu();
   const active = s.openFiles.find((f) => f.path === s.activePath);
 
   const breadcrumb = active
     ? active.path.replace(/\\/g, "/").split("/").slice(-3)
     : [];
+
+  /** Right-click inside the code editor: real CodeMirror commands. */
+  const onEditorContextMenu = (e: ReactMouseEvent) => {
+    const view = getActiveEditor();
+    ctx.open(e, [
+      { label: "Undo", shortcut: "Ctrl+Z", disabled: !view, action: editorUndo },
+      { label: "Redo", shortcut: "Ctrl+Y", disabled: !view, action: editorRedo },
+      { separator: true },
+      { label: "Cut", shortcut: "Ctrl+X", disabled: !hasEditorSelection(), action: () => void editorCut() },
+      { label: "Copy", shortcut: "Ctrl+C", disabled: !hasEditorSelection(), action: () => void editorCopy() },
+      { label: "Paste", shortcut: "Ctrl+V", disabled: !view, action: () => void editorPaste() },
+      { separator: true },
+      { label: "Select All", shortcut: "Ctrl+A", disabled: !view, action: editorSelectAll },
+      { label: "Find…", shortcut: "Ctrl+F", disabled: !view, action: editorFind },
+      { separator: true },
+      {
+        label: "Save",
+        shortcut: "Ctrl+S",
+        disabled: !active?.dirty,
+        action: () => active && void s.saveFile(active.path),
+      },
+    ]);
+  };
+
+  /** Right-click on a tab. */
+  const onTabContextMenu = (e: ReactMouseEvent, path: string, dirty: boolean) => {
+    ctx.open(e, [
+      { label: "Save", shortcut: "Ctrl+S", disabled: !dirty, action: () => void s.saveFile(path) },
+      { separator: true },
+      { label: "Close", action: () => s.closeTab(path) },
+      {
+        label: "Close Others",
+        disabled: s.openFiles.length < 2,
+        action: () => s.openFiles.forEach((f) => f.path !== path && s.closeTab(f.path)),
+      },
+      { label: "Close All", action: () => s.openFiles.forEach((f) => s.closeTab(f.path)) },
+      { separator: true },
+      { label: "Copy Path", action: () => void copyText(path) },
+    ]);
+  };
 
   return (
     <div className="h-full flex flex-col bg-darcula-editor min-w-0">
@@ -26,6 +75,7 @@ export default function EditorArea() {
               key={f.path}
               onClick={() => s.setActive(f.path)}
               onAuxClick={(e) => { if (e.button === 1) s.closeTab(f.path); }}
+              onContextMenu={(e) => onTabContextMenu(e, f.path, f.dirty)}
               className={`group flex items-center gap-1.5 h-8 px-3 text-2xs cursor-pointer border-r border-black/30 min-w-[120px] max-w-[200px] ${
                 isActive
                   ? "bg-darcula-editor text-white border-t-2 border-t-darcula-modified -mb-px"
@@ -72,7 +122,7 @@ export default function EditorArea() {
       )}
 
       {/* Editor */}
-      <div className="flex-1 min-h-0 relative">
+      <div className="flex-1 min-h-0 relative" onContextMenu={onEditorContextMenu}>
         {active ? (
           <CodeEditor
             key={active.path}
