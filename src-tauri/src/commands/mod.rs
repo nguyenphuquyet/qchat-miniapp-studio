@@ -2,7 +2,7 @@ pub mod build;
 pub mod fs;
 pub mod project;
 
-use serde::Serialize;
+use serde::{Deserialize, Serialize};
 
 #[derive(Serialize, Clone)]
 pub struct FileNode {
@@ -23,7 +23,7 @@ pub struct ProjectInfo {
     pub permissions: Vec<String>,
 }
 
-#[derive(Serialize, Clone)]
+#[derive(Serialize, Deserialize, Clone)]
 pub struct RecentProject {
     pub path: String,
     pub name: String,
