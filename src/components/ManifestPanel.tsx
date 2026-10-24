@@ -1,10 +1,10 @@
 import { useEffect, useState } from "react";
-import { X, Save } from "lucide-react";
+import { Save } from "lucide-react";
 import { useStudio } from "../lib/store";
 import { ALL_PERMISSIONS } from "../lib/api";
 import { useI18n } from "../lib/i18n";
 
-export default function ManifestPanel({ onClose }: { onClose: () => void }) {
+export default function ManifestPanel() {
   const s = useStudio();
   const { t } = useI18n();
   const p = s.project;
@@ -32,12 +32,7 @@ export default function ManifestPanel({ onClose }: { onClose: () => void }) {
     description !== p.description || JSON.stringify(permissions) !== JSON.stringify(p.permissions);
 
   return (
-    <div className="h-full flex flex-col bg-darcula-editor border-l border-black/40">
-      <div className="flex items-center h-7 px-2 border-b border-black/40 text-2xs shrink-0">
-        <span className="font-semibold text-darcula-text">{t("manifest.title")}</span>
-        <div className="flex-1" />
-        <button className="p-1 hover:bg-white/10 rounded" onClick={onClose}><X size={12} className="text-darcula-dim" /></button>
-      </div>
+    <div className="h-full flex flex-col bg-darcula-editor">
       <div className="flex-1 overflow-auto p-3 space-y-3 text-2xs">
         <div>
           <div className="text-darcula-dim mb-1">{t("manifest.appName")}</div>

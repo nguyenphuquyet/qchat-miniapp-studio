@@ -23,7 +23,8 @@ export type OpenFile = {
   dirty: boolean;
 };
 
-export type BottomTab = "build" | "run" | "preview" | "terminal";
+export type BottomTab = "build" | "run" | "terminal";
+export type RightTab = "manifest" | "preview";
 export type NodeDialogState = null | "ask" | "installing" | "failed";
 
 /**
@@ -63,6 +64,7 @@ type StudioState = {
   previewUrl: string | null;
   bottomTab: BottomTab;
   rightOpen: boolean;
+  rightTab: RightTab;
   cursor: { line: number; col: number };
   dialog: null | "new" | "open";
   toast: string | null;
@@ -89,6 +91,7 @@ type StudioState = {
   closeNodeDialog: () => void;
   setBottomTab: (t: BottomTab) => void;
   setRightOpen: (v: boolean) => void;
+  setRightTab: (t: RightTab) => void;
   setUiScale: (n: number) => void;
   zoomIn: () => void;
   zoomOut: () => void;
@@ -122,6 +125,7 @@ export function StudioProvider({ children }: { children: React.ReactNode }) {
   const [previewUrl, setPreviewUrl] = useState<string | null>(null);
   const [bottomTab, setBottomTab] = useState<BottomTab>("build");
   const [rightOpen, setRightOpen] = useState(true);
+  const [rightTab, setRightTab] = useState<RightTab>("manifest");
   const [cursor, setCursor] = useState({ line: 1, col: 1 });
   const [dialog, setDialog] = useState<null | "new" | "open">(null);
   const [toast, setToast] = useState<string | null>(null);
@@ -393,7 +397,8 @@ export function StudioProvider({ children }: { children: React.ReactNode }) {
     try {
       const url = await api.startPreview(project.path);
       setPreviewUrl(url + "?t=" + Date.now());
-      setBottomTab("preview");
+      setRightTab("preview");
+      setRightOpen(true);
       showToast(t("toast.previewStarted"));
     } catch (e) {
       showToast(String(e));
@@ -447,11 +452,11 @@ export function StudioProvider({ children }: { children: React.ReactNode }) {
 
   const value: StudioState = {
     project, tree, recent, openFiles, activePath, buildLogs, buildRunning, buildResult,
-    previewUrl, bottomTab, rightOpen, cursor, dialog, toast, uiScale,
+    previewUrl, bottomTab, rightOpen, rightTab, cursor, dialog, toast, uiScale,
     nodeDialog, nodeCanAutoInstall, nodeError,
     loadRecent, doOpenProject, doCreateProject, closeProject, refreshTree,
     openFile: openFilePath, closeTab, setActive, updateContent, saveFile, saveAll,
-    runBuild, runPreview, setBottomTab, setRightOpen, clearBuildLogs,
+    runBuild, runPreview, setBottomTab, setRightOpen, setRightTab, clearBuildLogs,
     confirmNodeInstall, declineNodeInstall, closeNodeDialog,
     setUiScale: (n: number) => setUiScale(clampScale(n)),
     zoomIn, zoomOut, resetZoom,

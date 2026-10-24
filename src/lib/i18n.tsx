@@ -54,6 +54,7 @@ const vi = {
   "strip.showTools": "Hiện cửa sổ công cụ",
   "editor.unsaved": "Chưa lưu — bấm để lưu",
   "manifest.show": "Hiện Manifest",
+  "right.tab.manifest": "Manifest",
 
   "menu.file": "Tệp",
   "menu.file.new": "Dự án Mini App mới…",
@@ -233,6 +234,7 @@ const en: Record<I18nKey, string> = {
   "strip.showTools": "Show tool window",
   "editor.unsaved": "Unsaved — click to save",
   "manifest.show": "Show Manifest",
+  "right.tab.manifest": "Manifest",
 
   "menu.file": "File",
   "menu.file.new": "New Mini App Project...",
@@ -410,6 +412,7 @@ const zh: Record<I18nKey, string> = {
   "strip.showTools": "显示工具窗口",
   "editor.unsaved": "未保存 — 点击保存",
   "manifest.show": "显示 Manifest",
+  "right.tab.manifest": "Manifest",
 
   "menu.file": "文件",
   "menu.file.new": "新建 Mini App 项目…",

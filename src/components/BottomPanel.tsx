@@ -1,7 +1,7 @@
-import { useEffect, useRef, useState } from "react";
+import { useEffect, useRef } from "react";
 import {
-  Hammer, Play, TerminalSquare, Smartphone, ChevronUp, X, CheckCircle2,
-  XCircle, Loader2, Package, ExternalLink, ClipboardCopy, Eraser, FolderOpen,
+  Hammer, Play, TerminalSquare, ChevronUp, CheckCircle2,
+  XCircle, Loader2, Package, ClipboardCopy, Eraser, FolderOpen,
 } from "lucide-react";
 import { useStudio } from "../lib/store";
 import type { BottomTab } from "../lib/store";
@@ -14,7 +14,6 @@ import type { MouseEvent as ReactMouseEvent } from "react";
 const TABS: { id: BottomTab; labelKey: I18nKey; icon: any }[] = [
   { id: "build", labelKey: "bottom.tab.build", icon: Hammer },
   { id: "run", labelKey: "bottom.tab.run", icon: Play },
-  { id: "preview", labelKey: "bottom.tab.preview", icon: Smartphone },
   { id: "terminal", labelKey: "bottom.tab.terminal", icon: TerminalSquare },
 ];
 
@@ -23,7 +22,6 @@ export default function BottomPanel({ onHide }: { onHide: () => void }) {
   const ctx = useContextMenu();
   const { t } = useI18n();
   const logRef = useRef<HTMLDivElement>(null);
-  const [phoneScale, setPhoneScale] = useState(1);
 
   /** Opens the folder with the built ZIP (falls back to the project's release/ folder). */
   const openBuildFolder = () => {
@@ -148,49 +146,6 @@ export default function BottomPanel({ onHide }: { onHide: () => void }) {
           <div className="p-3 text-2xs text-darcula-text font-mono" onContextMenu={onLogContextMenu}>
             <div><span className="text-darcula-green">user@qchat-studio</span>:<span className="text-darcula-accent">~/project</span>$ _</div>
             <div className="text-darcula-dim mt-2">{t("bottom.terminalHint")}</div>
-          </div>
-        )}
-
-        {s.bottomTab === "preview" && (
-          <div className="h-full flex items-stretch">
-            <div className="flex-1 grid place-items-center p-4 bg-[#1e1f22] overflow-auto relative">
-              {s.previewUrl ? (
-                <div className="flex flex-col items-center gap-2">
-                  <div className="flex items-center gap-2 text-2xs text-darcula-dim">
-                    <Smartphone size={12} className="text-darcula-accent" />
-                    <span>{t("bottom.previewDevice")}</span>
-                    <button className="flex items-center gap-1 text-darcula-accent hover:underline" onClick={() => s.runPreview()}>
-                      <ExternalLink size={11} /> {t("bottom.previewReload")}
-                    </button>
-                  </div>
-                  <div
-                    className="rounded-[28px] border-[10px] border-black bg-black shadow-2xl overflow-hidden"
-                    style={{ width: 390 * phoneScale, height: 844 * phoneScale, maxHeight: "100%" }}
-                  >
-                    <iframe
-                      key={s.previewUrl}
-                      src={s.previewUrl}
-                      className="w-full h-full bg-white"
-                      title="Mini App Preview"
-                      sandbox="allow-scripts allow-same-origin allow-forms allow-modals"
-                    />
-                  </div>
-                </div>
-              ) : (
-                <div className="text-center text-darcula-dim text-2xs">
-                  <Smartphone size={32} className="mx-auto mb-2 opacity-40" />
-                  {t("bottom.previewNone")}
-                </div>
-              )}
-            </div>
-            <div className="w-40 border-l border-black/30 p-2 flex flex-col gap-2 shrink-0">
-              <div className="text-2xs font-semibold text-darcula-text">{t("bottom.previewSettings")}</div>
-              <label className="text-2xs text-darcula-dim">{t("bottom.previewZoom")}</label>
-              <input type="range" min={0.4} max={1} step={0.05} value={phoneScale} onChange={(e) => setPhoneScale(Number(e.target.value))} />
-              <div className="text-2xs text-darcula-dim">{Math.round(phoneScale * 100)}%</div>
-              <div className="h-px bg-white/10 my-1" />
-              <div className="text-2xs text-darcula-dim">{t("bottom.mockBridgeNote")}</div>
-            </div>
           </div>
         )}
       </div>

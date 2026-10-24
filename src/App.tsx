@@ -14,16 +14,15 @@ import StatusBar from "./components/StatusBar";
 import WelcomeScreen from "./components/WelcomeScreen";
 import NewProjectDialog from "./components/NewProjectDialog";
 import NodeInstallDialog from "./components/NodeInstallDialog";
-import ManifestPanel from "./components/ManifestPanel";
+import RightPanel from "./components/RightPanel";
 
 export default function App() {
   const s = useStudio();
   const { t } = useI18n();
   const [leftW, setLeftW] = useState(240);
-  const [rightW, setRightW] = useState(260);
+  const [rightW, setRightW] = useState(300);
   const [bottomH, setBottomH] = useState(230);
   const [bottomVisible, setBottomVisible] = useState(true);
-  const [rightVisible, setRightVisible] = useState(true);
   const dragging = useRef<null | "left" | "right" | "bottom">(null);
 
   // Handle "Open Project" dialog from anywhere (menu / welcome).
@@ -41,7 +40,7 @@ export default function App() {
     const onMove = (e: MouseEvent) => {
       if (!dragging.current) return;
       if (dragging.current === "left") setLeftW(Math.max(160, Math.min(480, e.clientX - 28)));
-      if (dragging.current === "right") setRightW(Math.max(200, Math.min(420, window.innerWidth - e.clientX)));
+      if (dragging.current === "right") setRightW(Math.max(240, Math.min(640, window.innerWidth - e.clientX)));
       if (dragging.current === "bottom") setBottomH(Math.max(120, Math.min(500, window.innerHeight - e.clientY - 24)));
     };
     const onUp = () => (dragging.current = null);
@@ -52,6 +51,11 @@ export default function App() {
       window.removeEventListener("mouseup", onUp);
     };
   }, []);
+
+  // The phone preview needs more room than the manifest form.
+  useEffect(() => {
+    if (s.rightOpen && s.rightTab === "preview") setRightW((w) => Math.max(w, 380));
+  }, [s.rightOpen, s.rightTab]);
 
   if (!s.project) {
     return (
@@ -91,7 +95,11 @@ export default function App() {
           {stripIcon(GitBranch, false, "Git", () => s.showToast(t("toast.gitSoon")))}
           <div className="flex-1" />
           {stripIcon(Hammer, bottomVisible && s.bottomTab === "build", t("bottom.tab.build"), () => { setBottomVisible(true); s.setBottomTab("build"); })}
-          {stripIcon(Smartphone, bottomVisible && s.bottomTab === "preview", t("bottom.tab.preview"), () => { setBottomVisible(true); s.setBottomTab("preview"); if (!s.previewUrl) s.runPreview(); })}
+          {stripIcon(Smartphone, s.rightOpen && s.rightTab === "preview", t("bottom.tab.preview"), () => {
+            s.setRightOpen(true);
+            s.setRightTab("preview");
+            if (!s.previewUrl) void s.runPreview();
+          })}
           <button
             title={bottomVisible ? t("strip.hideTools") : t("strip.showTools")}
             onClick={() => setBottomVisible((v) => !v)}
@@ -128,22 +136,22 @@ export default function App() {
           )}
         </div>
 
-        {/* Right manifest panel */}
-        {rightVisible && (
+        {/* Right tool window: Manifest + Preview */}
+        {s.rightOpen && (
           <>
             <div
               className="w-1 cursor-col-resize bg-transparent hover:bg-darcula-accent/50 shrink-0"
               onMouseDown={() => (dragging.current = "right")}
             />
             <div style={{ width: rightW }} className="shrink-0 min-w-0">
-              <ManifestPanel onClose={() => setRightVisible(false)} />
+              <RightPanel onClose={() => s.setRightOpen(false)} />
             </div>
           </>
         )}
-        {!rightVisible && (
+        {!s.rightOpen && (
           <button
             className="w-6 bg-darcula-panel border-l border-black/40 text-darcula-dim hover:text-white text-2xs [writing-mode:vertical-rl] flex items-center justify-center gap-2"
-            onClick={() => setRightVisible(true)}
+            onClick={() => s.setRightOpen(true)}
             title={t("manifest.show")}
           >
             <Braces size={12} /> Manifest
