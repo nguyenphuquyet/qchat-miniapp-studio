@@ -53,6 +53,35 @@ jobs:
       - name: Install frontend dependencies
         run: npm ci
 
+      - name: Stage bundled Node.js runtime
+        shell: pwsh
+        run: |
+          $ErrorActionPreference = "Stop"
+          $src = Split-Path (Get-Command node).Source -Parent
+          $dest = "src-tauri/resources/node"
+          Remove-Item $dest -Recurse -Force -ErrorAction SilentlyContinue
+          New-Item -ItemType Directory -Force $dest | Out-Null
+          Copy-Item "$src\*" $dest -Recurse -Force
+          # Drop what the studio never uses, to keep the installers smaller.
+          foreach ($junk in @(
+            "node_modules\corepack",
+            "node_modules\npm\docs",
+            "node_modules\npm\man",
+            "node_modules\npm\test",
+            "nodevars.bat",
+            "install_tools.bat",
+            "node_etw_provider.man",
+            "CHANGELOG.md",
+            "LICENSE",
+            "README.md"
+          )) {
+            Remove-Item (Join-Path $dest $junk) -Recurse -Force -ErrorAction SilentlyContinue
+          }
+          if (-not (Test-Path "$dest\node.exe")) { throw "node.exe was not staged" }
+          if (-not (Test-Path "$dest\node_modules\npm\bin\npm-cli.js")) { throw "npm-cli.js was not staged" }
+          $mb = [math]::Round(((Get-ChildItem $dest -Recurse -File | Measure-Object Length -Sum).Sum / 1MB), 1)
+          Write-Host "Staged Node.js $(& node --version) at $dest ($mb MB)"
+
       - name: Build Tauri app (MSI + NSIS)
         # `npm run tauri -- build ...` forwards everything after `--` to the Tauri CLI.
         run: npm run tauri -- build --target x86_64-pc-windows-msvc
@@ -68,6 +97,18 @@ jobs:
               Format-Table -AutoSize
           } else {
             Write-Host "No bundle directory found at $bundle"
+          }
+
+          # Sanity check: the bundled Node.js runtime must be inside the installer.
+          $msi = Get-ChildItem "$bundle/msi/*.msi" -ErrorAction SilentlyContinue | Select-Object -First 1
+          $sevenZip = Join-Path $env:ProgramFiles "7-Zip/7z.exe"
+          if ($msi -and (Test-Path $sevenZip)) {
+            $listing = & $sevenZip l $msi.FullName
+            if ($listing -match "node\.exe") {
+              Write-Host "OK: bundled Node.js runtime found inside $($msi.Name)"
+            } else {
+              Write-Warning "node.exe not listed inside $($msi.Name) - check the bundle.resources glob in tauri.conf.json"
+            }
           }
 
       - name: Upload MSI installer
@@ -92,12 +133,27 @@ jobs:
           if-no-files-found: error
           retention-days: 14
 
-      - name: Upload portable executable
+      - name: Package portable build (exe + bundled Node.js)
+        shell: pwsh
+        run: |
+          $ErrorActionPreference = "Stop"
+          $release = "src-tauri/target/x86_64-pc-windows-msvc/release"
+          $exe = Get-ChildItem $release -Filter *.exe -File | Select-Object -First 1
+          if (-not $exe) { throw "No application executable found in $release" }
+          $stage = "portable/qchat-miniapp-studio"
+          Remove-Item portable -Recurse -Force -ErrorAction SilentlyContinue
+          New-Item -ItemType Directory -Force $stage | Out-Null
+          Copy-Item $exe.FullName (Join-Path $stage $exe.Name)
+          # A portable .exe resolves its resources next to itself, so mirror the layout.
+          Copy-Item "src-tauri/resources/node" (Join-Path $stage "resources/node") -Recurse -Force
+          Compress-Archive -Path "$stage\*" -DestinationPath "qchat-miniapp-studio-windows-portable.zip" -Force
+          $mb = [math]::Round((Get-Item qchat-miniapp-studio-windows-portable.zip).Length / 1MB, 1)
+          Write-Host "Portable ZIP built: qchat-miniapp-studio-windows-portable.zip ($mb MB)"
+
+      - name: Upload portable build (self-contained ZIP)
         uses: actions/upload-artifact@v4
         with:
           name: qchat-miniapp-studio-windows-portable
-          path: |
-            src-tauri/target/x86_64-pc-windows-msvc/release/*.exe
-            src-tauri/target/release/*.exe
-          if-no-files-found: warn
+          path: qchat-miniapp-studio-windows-portable.zip
+          if-no-files-found: error
           retention-days: 14

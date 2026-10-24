@@ -43,6 +43,33 @@ jobs:
       - name: Install frontend dependencies
         run: npm ci
 
+      - name: Stage bundled Node.js runtime (Windows)
+        if: matrix.platform == 'windows-latest'
+        shell: pwsh
+        run: |
+          $ErrorActionPreference = "Stop"
+          $src = Split-Path (Get-Command node).Source -Parent
+          $dest = "src-tauri/resources/node"
+          Remove-Item $dest -Recurse -Force -ErrorAction SilentlyContinue
+          New-Item -ItemType Directory -Force $dest | Out-Null
+          Copy-Item "$src\*" $dest -Recurse -Force
+          foreach ($junk in @(
+            "node_modules\corepack",
+            "node_modules\npm\docs",
+            "node_modules\npm\man",
+            "node_modules\npm\test",
+            "nodevars.bat",
+            "install_tools.bat",
+            "node_etw_provider.man",
+            "CHANGELOG.md",
+            "LICENSE",
+            "README.md"
+          )) {
+            Remove-Item (Join-Path $dest $junk) -Recurse -Force -ErrorAction SilentlyContinue
+          }
+          if (-not (Test-Path "$dest\node.exe")) { throw "node.exe was not staged" }
+          Write-Host "Staged Node.js $(& node --version) at $dest"
+
       - name: Build Tauri app + create release draft
         uses: tauri-apps/tauri-action@v0
         env:

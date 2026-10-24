@@ -2,13 +2,14 @@ use std::fs;
 use std::io::{BufRead, BufReader, Read, Write};
 use std::net::{TcpListener, TcpStream};
 use std::path::{Path, PathBuf};
+use std::process::{Command, Stdio};
 use std::sync::atomic::{AtomicBool, Ordering};
 use std::sync::{Arc, Mutex};
 use std::thread;
 use std::time::Duration;
 
 use serde::Serialize;
-use tauri::{AppHandle, Emitter, State};
+use tauri::{AppHandle, Emitter, Manager, State};
 
 use crate::templates::MOCK_BRIDGE_JS;
 
@@ -36,6 +37,72 @@ fn npm_cmd() -> &'static str {
     if cfg!(windows) { "npm.cmd" } else { "npm" }
 }
 
+fn node_exe() -> &'static str {
+    if cfg!(windows) { "node.exe" } else { "node" }
+}
+
+/// `CREATE_NO_WINDOW`: run a child process without giving it a console window.
+#[cfg(windows)]
+const CREATE_NO_WINDOW: u32 = 0x0800_0000;
+
+/// The studio is a GUI app with no console attached, so on Windows every child
+/// process would otherwise pop up its own console window. Child processes stay
+/// windowless instead: their output is piped into the in-app Build panel by
+/// [`stream_lines`], so the "terminal" lives inside the studio window.
+#[cfg(windows)]
+fn no_window(cmd: &mut Command) {
+    use std::os::windows::process::CommandExt;
+    cmd.creation_flags(CREATE_NO_WINDOW);
+}
+
+#[cfg(not(windows))]
+fn no_window(_cmd: &mut Command) {}
+
+/// Directory of the Node.js runtime shipped inside the app, when present.
+///
+/// CI stages the official Node.js build into `src-tauri/resources/node` before
+/// `tauri build` (see `.github/workflows/build-windows.yml`), so the studio can
+/// build projects on a machine that has no Node.js installed.
+fn bundled_node_dir(app: &AppHandle) -> Option<PathBuf> {
+    let mut candidates: Vec<PathBuf> = Vec::new();
+    if let Ok(dir) = app.path().resource_dir() {
+        // Tauri keeps the path relative to `src-tauri`, but be tolerant about it.
+        candidates.push(dir.join("resources").join("node"));
+        candidates.push(dir.join("node"));
+    }
+    // `tauri dev` / `cargo run` straight from the repository.
+    candidates.push(PathBuf::from(env!("CARGO_MANIFEST_DIR")).join("resources").join("node"));
+    candidates.into_iter().find(|dir| dir.join(node_exe()).is_file())
+}
+
+/// Prepends `dir` to the `PATH` of a child process so npm lifecycle scripts
+/// (`node`, `node-gyp`, nested `npm`) pick up the bundled runtime.
+fn prepend_path(cmd: &mut Command, dir: &Path) {
+    let mut paths = vec![dir.to_path_buf()];
+    if let Some(existing) = std::env::var_os("PATH") {
+        paths.extend(std::env::split_paths(&existing));
+    }
+    if let Ok(joined) = std::env::join_paths(paths) {
+        cmd.env("PATH", joined);
+    }
+}
+
+/// Resolves how npm gets invoked: the Node.js runtime bundled with the app when
+/// one is available, otherwise the system-wide npm. Returns the command plus a
+/// label describing the runtime (surfaced in the in-app build log).
+fn npm_command(app: &AppHandle) -> (Command, String) {
+    if let Some(dir) = bundled_node_dir(app) {
+        let npm_cli = dir.join("node_modules").join("npm").join("bin").join("npm-cli.js");
+        if npm_cli.is_file() {
+            let mut cmd = Command::new(dir.join(node_exe()));
+            cmd.arg(&npm_cli);
+            prepend_path(&mut cmd, &dir);
+            return (cmd, format!("bundled Node.js · {}", dir.display()));
+        }
+    }
+    (Command::new(npm_cmd()), format!("system {} (no bundled Node.js found)", npm_cmd()))
+}
+
 fn stream_lines<R: Read + Send + 'static>(app: AppHandle, reader: R, stream_name: &'static str) {
     let reader = BufReader::new(reader);
     thread::spawn(move || {
@@ -46,12 +113,15 @@ fn stream_lines<R: Read + Send + 'static>(app: AppHandle, reader: R, stream_name
 }
 
 fn run_and_stream(app: &AppHandle, cwd: &Path, args: &[&str], label: &str) -> bool {
-    let _ = app.emit("build-log", BuildLog { stream: "info".into(), line: format!("$ {label}") });
-    let mut child = match std::process::Command::new(npm_cmd())
+    let (mut cmd, runtime) = npm_command(app);
+    let _ = app.emit("build-log", BuildLog { stream: "info".into(), line: format!("$ {label}  [{runtime}]") });
+    no_window(&mut cmd);
+    let mut child = match cmd
         .args(args)
         .current_dir(cwd)
-        .stdout(std::process::Stdio::piped())
-        .stderr(std::process::Stdio::piped())
+        .stdin(Stdio::null())
+        .stdout(Stdio::piped())
+        .stderr(Stdio::piped())
         .spawn()
     {
         Ok(c) => c,
@@ -95,6 +165,11 @@ pub fn build_project(app: AppHandle, project_path: String) -> Result<(), String>
     }
     thread::spawn(move || {
         let app2 = app.clone();
+        let (_, runtime) = npm_command(&app2);
+        let _ = app2.emit(
+            "build-log",
+            BuildLog { stream: "info".into(), line: format!("Build runtime: {runtime}") },
+        );
         let needs_install = !cwd.join("node_modules").exists();
         let ok_install = !needs_install || run_and_stream(&app2, &cwd, &["install"], "npm install");
         let ok_build = ok_install && run_and_stream(&app2, &cwd, &["run", "build"], "npm run build");
