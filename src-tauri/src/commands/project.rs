@@ -37,12 +37,19 @@ fn add_recent(app: &AppHandle, path: &str, name: &str) {
     write_recent(app, &list);
 }
 
+/// Turns a project name into a folder name. Only the characters Windows
+/// forbids (and control characters) are replaced, so `Game 1` stays `Game 1`
+/// instead of losing its spaces.
 fn sanitize_name(name: &str) -> String {
-    name.chars()
-        .map(|c| if c.is_alphanumeric() || c == '-' || c == '_' { c } else { '-' })
-        .collect::<String>()
-        .trim_matches('-')
-        .to_string()
+    let mut out = String::with_capacity(name.len());
+    for c in name.chars() {
+        let forbidden = matches!(c, '<' | '>' | ':' | '"' | '/' | '\\' | '|' | '?' | '*')
+            || (c as u32) < 0x20;
+        out.push(if forbidden { '-' } else { c });
+    }
+    // Windows forbids trailing dots and spaces, and the names are used in paths.
+    let cleaned = out.trim().trim_end_matches('.').trim();
+    cleaned.chars().take(64).collect()
 }
 
 #[derive(Deserialize)]
@@ -61,9 +68,27 @@ pub fn create_project(app: AppHandle, args: CreateProjectArgs) -> Result<String,
     if folder.is_empty() {
         return Err("Invalid project name".into());
     }
-    let project_dir = Path::new(&args.parent_dir).join(&folder);
+    let parent = Path::new(args.parent_dir.trim());
+    // The project always sits one level under the chosen directory: if that
+    // directory is already named after the project, use it as is instead of
+    // creating `<picked>\<project>\<project>`.
+    let parent_name = parent
+        .file_name()
+        .map(|s| s.to_string_lossy().to_string())
+        .unwrap_or_default();
+    let project_dir = if parent_name.eq_ignore_ascii_case(&folder) {
+        parent.to_path_buf()
+    } else {
+        parent.join(&folder)
+    };
     if project_dir.exists() {
-        return Err(format!("Directory already exists: {}", project_dir.display()));
+        // An empty folder is fine to fill in; anything else is a real conflict.
+        let empty = fs::read_dir(&project_dir)
+            .map(|mut entries| entries.next().is_none())
+            .unwrap_or(false);
+        if !empty {
+            return Err(format!("Directory already exists: {}", project_dir.display()));
+        }
     }
     let files = render_template(&args.name, &args.app_id, &args.description, &args.version, &args.permissions);
     for file in &files {

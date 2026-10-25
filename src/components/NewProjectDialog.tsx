@@ -1,7 +1,7 @@
 import { useEffect, useState } from "react";
 import { X, FolderOpen, RefreshCw } from "lucide-react";
 import { useStudio } from "../lib/store";
-import { api, ALL_PERMISSIONS, generateAppId } from "../lib/api";
+import { api, ALL_PERMISSIONS, generateAppId, projectPathPreview } from "../lib/api";
 import { useI18n } from "../lib/i18n";
 
 export default function NewProjectDialog() {
@@ -13,11 +13,23 @@ export default function NewProjectDialog() {
   const [version, setVersion] = useState("1.0.0");
   const [permissions, setPermissions] = useState<string[]>(["toast", "storage"]);
   const [location, setLocation] = useState("");
+  const [defaultDir, setDefaultDir] = useState("");
   const [error, setError] = useState("");
 
   useEffect(() => {
-    // Default location: home dir
-    setLocation((prev) => prev || "");
+    // Default location: <Documents>/QChat Mini App Studio Project (created on disk).
+    let alive = true;
+    api
+      .defaultProjectDir()
+      .then((dir) => {
+        if (!alive) return;
+        setDefaultDir(dir);
+        setLocation((prev) => prev || dir);
+      })
+      .catch(() => {});
+    return () => {
+      alive = false;
+    };
   }, []);
 
   if (s.dialog !== "new") return null;
@@ -75,9 +87,17 @@ export default function NewProjectDialog() {
             <Field label={t("newProject.location")}>
               <div className="flex gap-2">
                 <input className="inp flex-1 text-2xs" value={location} placeholder={t("newProject.locationPlaceholder")} onChange={(e) => setLocation(e.target.value)} />
-                <button className="btn" onClick={async () => { const d = await api.pickDirectory(); if (d) setLocation(d); }}><FolderOpen size={13} /></button>
+                <button className="btn" onClick={async () => { const d = await api.pickDirectory(location || defaultDir); if (d) setLocation(d); }}><FolderOpen size={13} /></button>
               </div>
             </Field>
+          </div>
+
+          <div>
+            <div className="text-2xs text-darcula-dim mb-1">{t("newProject.pathPreview")}</div>
+            <div className="font-mono text-2xs text-darcula-text bg-darcula-editor border border-white/5 rounded px-2 py-1.5 break-all">
+              {projectPathPreview(location, name) || "—"}
+            </div>
+            <div className="text-2xs text-darcula-dim mt-1">{t("newProject.locationHint")}</div>
           </div>
 
           <div>

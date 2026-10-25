@@ -6,7 +6,7 @@ Viết bằng **TypeScript** (React + Vite + TailwindCSS + Lucide icons + JetBra
 ## Tính năng
 
 - **Màn hình Welcome** kiểu Android Studio: New Project / Open / Recent Projects.
-- **Tạo dự án**: scaffold sẵn template React + Vite, có sẵn `@qchat/miniapp-sdk` được vendored trong `src/sdk/` (không phụ thuộc monorepo), `qchat.manifest.json` đúng chuẩn QChat (schemaVersion, appId `mp_…`, version semver, requestedPermissions).
+- **Tạo dự án**: scaffold sẵn template React + Vite, có sẵn `@qchat/miniapp-sdk` được vendored trong `src/sdk/` (không phụ thuộc monorepo), `qchat.manifest.json` đúng chuẩn QChat (schemaVersion, appId `mp_…`, version semver, requestedPermissions). Thư mục mặc định là `Documents\QChat Mini App Studio Project` (tự tạo nếu chưa có) và dự án luôn được tạo ở tầng thứ nhất trong thư mục đã chọn — `<thư mục>\<tên dự án>`, không thêm thư mục trung gian.
 - **Mở dự án**: import project mini app có sẵn (tự nhận diện `qchat.manifest.json`).
 - **Giao diện y hệt Android Studio**: title bar + menu bar (File/Edit/View/Navigate/Code/Analyze/Refactor/Build/Run/Tools/VCS/Window/Help) + toolbar (Run xanh, Debug, Build, device selector "QChat Mini App Preview", SDK selector, Search Everywhere) + Project tool window trái + editor tabs + breadcrumb + gutter line numbers + syntax highlighting Darcula (CodeMirror 6) + bottom tool window (Build/Run/Preview/Terminal) + status bar (git branch, UTF-8, LF, line:col…).
 - **Editor**: CodeMirror 6 với theme Darcula, highlight TS/TSX/JS/JSON/HTML/CSS, autocomplete, bracket matching, Ctrl+S save, tab dirty marker.

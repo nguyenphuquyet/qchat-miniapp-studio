@@ -1,6 +1,10 @@
 import { invoke } from "@tauri-apps/api/core";
 import { listen, type UnlistenFn } from "@tauri-apps/api/event";
+import { documentDir } from "@tauri-apps/api/path";
 import { open as openDialog } from "@tauri-apps/plugin-dialog";
+
+/** Folder created inside the user's Documents directory for new projects. */
+export const DEFAULT_PROJECT_DIR_NAME = "QChat Mini App Studio Project";
 
 export type FileNode = {
   name: string;
@@ -47,6 +51,16 @@ export const ALL_PERMISSIONS = [
 ] as const;
 
 export const api = {
+  /**
+   * `<Documents>/QChat Mini App Studio Project`, created on disk so the folder
+   * picker can open it directly.
+   */
+  defaultProjectDir: async () => {
+    const docs = (await documentDir()).replace(/[\\/]+$/, "");
+    const dir = `${docs}${sep(docs)}${DEFAULT_PROJECT_DIR_NAME}`;
+    await api.createDirectory(dir).catch(() => {});
+    return dir;
+  },
   createProject: (args: CreateProjectArgs) => invoke<string>("create_project", { args }),
   openProject: (path: string) => invoke<ProjectInfo>("open_project", { path }),
   recentProjects: () => invoke<RecentProject[]>("recent_projects"),
@@ -63,8 +77,12 @@ export const api = {
   startPreview: (projectPath: string) => invoke<string>("start_preview", { projectPath }),
   stopPreview: () => invoke<void>("stop_preview"),
   releaseZipPath: (projectPath: string) => invoke<string | null>("release_zip_path", { projectPath }),
-  pickDirectory: async () =>
-    openDialog({ directory: true, multiple: false }) as Promise<string | null>,
+  pickDirectory: async (defaultPath?: string) =>
+    openDialog({
+      directory: true,
+      multiple: false,
+      ...(defaultPath ? { defaultPath } : {}),
+    }) as Promise<string | null>,
 };
 
 export function onBuildLog(cb: (line: BuildLogLine) => void): Promise<UnlistenFn> {
@@ -87,6 +105,38 @@ export function fileLanguage(path: string): "tsx" | "ts" | "js" | "json" | "html
 export function fileName(path: string): string {
   const parts = path.replace(/\\/g, "/").split("/");
   return parts[parts.length - 1] || path;
+}
+
+function sep(path: string): string {
+  return path.includes("\\") ? "\\" : "/";
+}
+
+/**
+ * Folder name used for a project. Mirrors `sanitize_name` in
+ * `src-tauri/src/commands/project.rs`: only characters Windows forbids become
+ * `-`, everything else (spaces, Vietnamese letters) is kept as typed.
+ */
+export function projectFolderName(name: string): string {
+  const cleaned = name
+    .replace(/[<>:"/\\|?*\u0000-\u001f]/g, "-")
+    .trim()
+    .replace(/\.+$/, "")
+    .trim();
+  return Array.from(cleaned).slice(0, 64).join("");
+}
+
+/**
+ * Absolute path a new project will be written to: exactly one level under the
+ * chosen folder (`<parent>\<project name>`), never `<parent>\<something>\<name>`.
+ */
+export function projectPathPreview(parentDir: string, name: string): string {
+  const parent = parentDir.trim().replace(/[\\/]+$/, "");
+  const folder = projectFolderName(name);
+  if (!folder) return parent;
+  const last = parent.split(/[\\/]/).pop() ?? "";
+  // The picked folder already is the project folder: use it as is.
+  if (last.toLowerCase() === folder.toLowerCase()) return parent;
+  return `${parent}${sep(parent)}${folder}`;
 }
 
 export function generateAppId(): string {
