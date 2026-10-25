@@ -28,6 +28,14 @@ export default function App() {
     })();
   }, []);
 
+  useEffect(() => {
+    // The host renders the mini app edge to edge, so honour the safe areas it
+    // reports (env(safe-area-inset-*) stays 0 in the Android WebView).
+    const root = document.documentElement;
+    root.style.setProperty("--safe-top", `${system?.safeAreaTop ?? 0}px`);
+    root.style.setProperty("--safe-bottom", `${system?.safeAreaBottom ?? 0}px`);
+  }, [system]);
+
   async function run(action: () => Promise<void>) {
     setStatus("");
     try {
@@ -57,7 +65,7 @@ export default function App() {
         <p className="muted">
           {app
             ? `${app.appId} · runtime ${app.runtimeVersion}`
-            : "Connecting to the QChat host…"}
+            : "Connecting to the QChat host..."}
         </p>
         <div className="row">
           <button onClick={() => void run(() => QChat.showToast("Hello from {{name}}"))}>
@@ -142,7 +150,7 @@ export default function App() {
             <div><dt>Screen</dt><dd>{Math.round(system.screenWidth)} × {Math.round(system.screenHeight)}</dd></div>
           </dl>
         ) : (
-          <p className="muted">Waiting for the host…</p>
+          <p className="muted">Waiting for the host...</p>
         )}
       </section>
 

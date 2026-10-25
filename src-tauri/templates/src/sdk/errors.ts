@@ -1,3 +1,5 @@
+/// Stable error codes returned by the SDK. The host uses the same codes on the
+/// other side of the bridge, so applications can branch on them safely.
 export type QChatErrorCode =
   | "BRIDGE_UNAVAILABLE"
   | "TIMEOUT"

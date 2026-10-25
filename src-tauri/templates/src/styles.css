@@ -1,5 +1,11 @@
 :root {
   color-scheme: light dark;
+  /* The host floats its menu and close buttons over the top right corner.
+     Keep --capsule wide enough for both, and keep --safe-* in sync with
+     QChat.getSystemInfo() (App.tsx overwrites them with the host values). */
+  --safe-top: env(safe-area-inset-top, 0px);
+  --safe-bottom: env(safe-area-inset-bottom, 0px);
+  --capsule: 92px;
   --bg: #f5f7f8;
   --card: #ffffff;
   --ink: #192d29;
@@ -9,6 +15,7 @@
   --accent: #10b981;
   font-family: "Manrope", ui-sans-serif, system-ui, -apple-system, "Segoe UI", sans-serif;
 }
+
 @media (prefers-color-scheme: dark) {
   :root {
     --bg: #0b1220;
@@ -20,25 +27,31 @@
     --accent: #34d399;
   }
 }
+
 * { box-sizing: border-box; }
+
 body {
   margin: 0;
   background: var(--bg);
   color: var(--ink);
-  padding: max(16px, env(safe-area-inset-top)) 16px max(16px, env(safe-area-inset-bottom));
+  padding: max(16px, var(--safe-top)) 16px max(16px, var(--safe-bottom));
 }
+
 main {
   max-width: 640px;
   margin: 0 auto;
   display: grid;
   gap: 14px;
 }
+
 header {
   display: flex;
   align-items: center;
   gap: 12px;
-  padding: 8px 4px 4px;
+  /* Right padding keeps the host's floating buttons clear of this row. */
+  padding: 8px var(--capsule) 4px 4px;
 }
+
 .mark {
   width: 44px;
   height: 44px;
@@ -50,6 +63,7 @@ header {
   font-weight: 800;
   font-size: 20px;
 }
+
 .eyebrow {
   margin: 0;
   font-size: 11px;
@@ -57,8 +71,10 @@ header {
   text-transform: uppercase;
   color: var(--muted);
 }
+
 h1 { margin: 2px 0 0; font-size: 22px; }
 h2 { margin: 0 0 8px; font-size: 15px; }
+
 .pill {
   margin-left: auto;
   border: 1px solid var(--line);
@@ -67,6 +83,7 @@ h2 { margin: 0 0 8px; font-size: 15px; }
   font-size: 12px;
   color: var(--muted);
 }
+
 .card {
   background: var(--card);
   border: 1px solid var(--line);
@@ -74,8 +91,11 @@ h2 { margin: 0 0 8px; font-size: 15px; }
   padding: 16px;
   box-shadow: 0 1px 2px rgb(15 23 42 / 0.04);
 }
+
 .muted { color: var(--muted); font-size: 13px; margin: 0; word-break: break-all; }
+
 .row { display: flex; flex-wrap: wrap; gap: 8px; margin-top: 12px; }
+
 button {
   border: 0;
   border-radius: 12px;
@@ -87,19 +107,23 @@ button {
   padding: 10px 14px;
   cursor: pointer;
 }
+
 button.secondary {
   background: transparent;
   color: var(--ink);
   border: 1px solid var(--line);
 }
+
 button.link {
   background: transparent;
   color: var(--muted);
   text-decoration: underline;
   padding: 8px;
 }
+
 .profile { margin: 12px 0 0; font-weight: 700; }
 .profile span { color: var(--muted); font-weight: 400; }
+
 .preview {
   margin-top: 12px;
   width: 100%;
@@ -107,6 +131,7 @@ button.link {
   object-fit: cover;
   border-radius: 12px;
 }
+
 .status {
   margin: 12px 0 0;
   font-size: 13px;
@@ -115,8 +140,10 @@ button.link {
   border-radius: 10px;
   padding: 8px 10px;
 }
+
 dl { margin: 0; display: grid; gap: 8px; }
 dl div { display: flex; justify-content: space-between; gap: 16px; font-size: 13px; }
 dt { color: var(--muted); }
 dd { margin: 0; font-weight: 600; text-align: right; }
+
 footer { text-align: center; padding: 4px 0 8px; }

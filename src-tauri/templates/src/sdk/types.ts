@@ -38,17 +38,22 @@ export type UserInfo = {
 };
 
 export type ToastOptions = {
+  /// Milliseconds, clamped by the host.
   duration?: number;
   icon?: "success" | "error" | "none";
 };
 
 export type ChooseImageOptions = {
+  /// Preferred maximum edge in pixels. The host may downscale the image.
   maxWidth?: number;
   maxHeight?: number;
+  /// JPEG quality between 0.1 and 1.
   quality?: number;
 };
 
 export type ChosenImage = {
+  /// A data URL (`data:image/...;base64,...`) so the WebView never receives a
+  /// local filesystem path.
   dataUrl: string;
   mimeType: string;
   width: number;

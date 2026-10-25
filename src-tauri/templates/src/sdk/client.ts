@@ -17,6 +17,9 @@ import type {
   UserInfo,
 } from "./types";
 
+/// Paths the host allows through `QChat.request`. Keep this list in sync with
+/// `packages/contracts/miniapps.ts`; the host rejects anything else even if a
+/// caller bypasses the SDK.
 export const MINIAPP_API_ALLOWLIST = [
   "/users/me",
   "/friends",
@@ -88,6 +91,8 @@ export class QChatClient {
     });
   }
 
+  /// Resolves one host response. Native code calls
+  /// `window.__QChatReceive(JSON.stringify(response))`.
   receive(payload: BridgeResponse | string | unknown): boolean {
     let response: BridgeResponse;
     if (typeof payload === "string") {
@@ -139,6 +144,7 @@ export class QChatClient {
         }
         window.QChatNative.postMessage(JSON.stringify(request));
       });
+
     return new Promise<T>((resolve, reject) => {
       const timer = setTimeout(() => {
         this.pending.delete(request.id);
@@ -302,6 +308,8 @@ export class QChatClient {
     return this.send<SystemInfo>("getSystemInfo", {}, this.timeoutMs);
   }
 
+  /// Rejects every in-flight call. Called when the mini app is closed so no
+  /// promise is left hanging in the page.
   dispose(reason = "Mini app closed") {
     this.disposed = true;
     for (const [id, pending] of this.pending) {
@@ -315,6 +323,8 @@ export class QChatClient {
   }
 }
 
+/// Default singleton. Import this in Mini App code:
+/// `import { QChat } from "./sdk";` (the SDK is vendored in this project)
 export const QChat = new QChatClient();
 
 export function createQChatClient(options: BridgeOptions = {}) {
