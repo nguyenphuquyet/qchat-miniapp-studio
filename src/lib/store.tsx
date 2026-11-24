@@ -3,6 +3,7 @@ import {
   api,
   fileLanguage,
   fileName,
+  joinPath,
   onBuildDone,
   onBuildLog,
   type BuildDone,
@@ -239,11 +240,15 @@ export function StudioProvider({ children }: { children: React.ReactNode }) {
         loadRecent();
         const fileTree = await api.listTree(path);
         setTree(fileTree);
-        // Auto-open manifest + App.tsx
-        const manifestPath = path + "/qchat.manifest.json";
-        const appPath = path + "/src/App.tsx";
-        await openFilePath(manifestPath);
-        await openFilePath(appPath);
+        // Auto-open the manifest and the app entry, but never fail the whole
+        // open when a project uses a different layout.
+        for (const rel of ["qchat.manifest.json", "src/App.tsx"]) {
+          try {
+            await openFilePath(joinPath(info.path, rel));
+          } catch {
+            /* optional file */
+          }
+        }
         showToast(t("toast.opened", { name: info.name }));
       } catch (e) {
         showToast(String(e));

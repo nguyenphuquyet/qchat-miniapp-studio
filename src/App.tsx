@@ -23,15 +23,28 @@ export default function App() {
   const [bottomH, setBottomH] = useState(230);
   const dragging = useRef<null | "left" | "right" | "bottom">(null);
 
-  // Handle "Open Project" dialog from anywhere (menu / welcome).
+  // Handle "Open Project" from anywhere (menu / welcome). The picker must only
+  // run once: WelcomeScreen used to start a second `pickDirectory()` call, and
+  // two concurrent native dialogs made "Open" look broken. Failures are shown
+  // instead of being swallowed by an unhandled rejection.
+  const openingRef = useRef(false);
   useEffect(() => {
-    if (s.dialog === "open") {
-      (async () => {
-        const dir = await api.pickDirectory();
+    if (s.dialog !== "open") return;
+    // Clear the request first so a second click can open the picker again later.
+    s.setDialog(null);
+    if (openingRef.current) return;
+    openingRef.current = true;
+    void (async () => {
+      try {
+        const dir = await api.pickDirectory(s.project?.path);
         if (dir) await s.doOpenProject(dir);
-        s.setDialog(null);
-      })();
-    }
+      } catch (e) {
+        s.showToast(String(e));
+      } finally {
+        openingRef.current = false;
+      }
+    })();
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [s.dialog]);
 
   useEffect(() => {

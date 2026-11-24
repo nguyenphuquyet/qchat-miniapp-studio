@@ -111,6 +111,13 @@ function sep(path: string): string {
   return path.includes("\\") ? "\\" : "/";
 }
 
+/** Joins path segments with the separator the base path already uses. */
+export function joinPath(base: string, ...parts: string[]): string {
+  const s = sep(base);
+  const head = base.replace(/[\\/]+$/, "");
+  return [head, ...parts.map((p) => p.replace(/^[\\/]+/, ""))].join(s);
+}
+
 /**
  * Folder name used for a project. Mirrors `sanitize_name` in
  * `src-tauri/src/commands/project.rs`: only characters Windows forbids become

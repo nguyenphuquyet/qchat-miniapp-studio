@@ -385,26 +385,51 @@ pub fn reveal_in_folder(path: String) -> Result<(), String> {
 }
 
 /// Explains why `npm install` has to run before building, or `None` when the
-/// installed dependencies are still usable.
+/// installed dependencies are actually usable.
 ///
-/// A generated Mini App ships its own `package.json`, so a freshly created
-/// project has no `node_modules` yet and `npm run build` would fail with
-/// "vite is not recognized". Dependencies also go stale when `package.json` or
-/// a lockfile is newer than the installed tree.
+/// Existence of `node_modules/` proves nothing: an interrupted or failed
+/// install still leaves the folder behind (empty or half populated), and then
+/// `npm run build` dies with "'vite' is not recognized". So the checks below
+/// look for the artifacts npm writes when an install really finished.
 fn install_reason(cwd: &Path) -> Option<String> {
     let modules = cwd.join("node_modules");
     if !modules.is_dir() {
         return Some("node_modules/ is missing".into());
     }
-    let Ok(installed) = fs::metadata(&modules).and_then(|m| m.modified()) else {
-        return Some("node_modules/ timestamp is unreadable".into());
-    };
-    for name in ["package.json", "package-lock.json", "npm-shrinkwrap.json"] {
-        let Ok(stamp) = fs::metadata(cwd.join(name)).and_then(|m| m.modified()) else {
-            continue;
-        };
-        if stamp > installed {
-            return Some(format!("{name} changed after the last install"));
+
+    // npm writes this manifest as the last step of a successful install.
+    let manifest = modules.join(".package-lock.json");
+    if !manifest.is_file() {
+        return Some("node_modules/ is incomplete (no .package-lock.json)".into());
+    }
+
+    // `npm run build` resolves binaries through node_modules/.bin.
+    let bin = modules.join(".bin");
+    if !bin.is_dir() {
+        return Some("node_modules/.bin is missing".into());
+    }
+
+    // The template's build script runs `vite`: require both the package and its
+    // shim, otherwise the build fails with "'vite' is not recognized".
+    let package_json = fs::read_to_string(cwd.join("package.json")).unwrap_or_default();
+    if package_json.contains("\"vite\"") {
+        if !modules.join("vite").join("package.json").is_file() {
+            return Some("vite is not installed in node_modules/".into());
+        }
+        if !bin.join("vite.cmd").is_file() && !bin.join("vite").is_file() {
+            return Some("node_modules/.bin/vite is missing".into());
+        }
+    }
+
+    // Re-install when package.json or a lockfile is newer than the install.
+    if let Ok(installed) = fs::metadata(&manifest).and_then(|m| m.modified()) {
+        for name in ["package.json", "package-lock.json", "npm-shrinkwrap.json"] {
+            let Ok(stamp) = fs::metadata(cwd.join(name)).and_then(|m| m.modified()) else {
+                continue;
+            };
+            if stamp > installed {
+                return Some(format!("{name} is newer than node_modules/"));
+            }
         }
     }
     None
@@ -443,11 +468,21 @@ pub fn build_project(app: AppHandle, project_path: String) -> Result<(), String>
         }
         // Dependencies first: a Mini App cannot be built without its own
         // node_modules (vite, typescript, react...). Installing is skipped only
-        // when the tree exists and is newer than package.json / the lockfiles.
+        // when the installed artifacts are really there and up to date.
         let ok_install = match install_reason(&cwd) {
             Some(reason) => {
                 log(&app2, "info", format!("Dependencies not ready ({reason}) — running npm install first…"));
-                run_and_stream(&app2, &cwd, &["install"], "npm install")
+                let installed = run_and_stream(&app2, &cwd, &["install"], "npm install");
+                if installed {
+                    if let Some(still) = install_reason(&cwd) {
+                        log(
+                            &app2,
+                            "error",
+                            format!("npm install finished but dependencies are still incomplete ({still})."),
+                        );
+                    }
+                }
+                installed
             }
             None => {
                 log(&app2, "info", "Dependencies are up to date — skipping npm install.");
@@ -455,6 +490,13 @@ pub fn build_project(app: AppHandle, project_path: String) -> Result<(), String>
             }
         };
         let ok_build = ok_install && run_and_stream(&app2, &cwd, &["run", "build"], "npm run build");
+        if !ok_build {
+            log(
+                &app2,
+                "info",
+                "Hint: if a command like `vite` is reported as missing, delete the project's node_modules/ folder and build again to reinstall dependencies.",
+            );
+        }
         let zip = if ok_build { find_release_zip(&cwd) } else { None };
         let _ = app2.emit(
             "build-done",

@@ -1,10 +1,8 @@
-import { useEffect } from "react";
 import {
   FolderOpen, FilePlus2, Clock, Trash2, Settings, Puzzle, GraduationCap,
   FolderGit2, ChevronRight,
 } from "lucide-react";
 import { useStudio } from "../lib/store";
-import { api } from "../lib/api";
 import { useI18n, type I18nKey } from "../lib/i18n";
 
 const NAV: { id: string; key: I18nKey; icon: any }[] = [
@@ -17,16 +15,6 @@ const NAV: { id: string; key: I18nKey; icon: any }[] = [
 export default function WelcomeScreen() {
   const s = useStudio();
   const { t } = useI18n();
-
-  useEffect(() => {
-    if (s.dialog === "open") {
-      (async () => {
-        const dir = await api.pickDirectory();
-        if (dir) await s.doOpenProject(dir);
-        s.setDialog(null);
-      })();
-    }
-  }, [s.dialog]);
 
   return (
     <div className="flex h-full bg-ide-editor">

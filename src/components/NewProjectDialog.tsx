@@ -91,7 +91,17 @@ export default function NewProjectDialog() {
             <Field label={t("newProject.location")}>
               <div className="flex gap-2">
                 <input className="ide-input flex-1 text-2xs" value={location} placeholder={t("newProject.locationPlaceholder")} onChange={(e) => setLocation(e.target.value)} />
-                <button className="ide-btn px-2.5" onClick={async () => { const d = await api.pickDirectory(location || defaultDir); if (d) setLocation(d); }}>
+                <button
+                  className="ide-btn px-2.5"
+                  onClick={async () => {
+                    try {
+                      const d = await api.pickDirectory(location || defaultDir);
+                      if (d) setLocation(d);
+                    } catch (e) {
+                      setError(String(e));
+                    }
+                  }}
+                >
                   <FolderOpen size={13} />
                 </button>
               </div>
