@@ -26,12 +26,15 @@ npm run tauri dev
 ## Build bản release
 
 ```bash
+npm install          # bắt buộc: cài dependencies (lần đầu hoặc sau khi đổi package.json)
 npm run tauri build
 ```
 
 Output: `src-tauri/target/release/qchat-miniapp-studio` (Linux) / `.exe` / `.msi` (Windows) / `.dmg` (macOS), kèm installer (deb/AppImage/msi/dmg).
 
-> Chỉ cần frontend (không cần Rust): `npm run build` → thư mục `dist/`.
+> Chỉ cần frontend (không cần Rust): `npm install` rồi `npm run build` → thư mục `dist/`.
+>
+> Lưu ý: nếu chưa có `node_modules/`, `npm run build` sẽ lỗi (`tsc`/`vite` không tìm thấy) — luôn chạy `npm install` trước. `npm install` cũng cần chạy lại sau khi `package.json`/`package-lock.json` thay đổi.
 
 ## Cấu trúc
 
