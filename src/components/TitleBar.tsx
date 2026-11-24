@@ -1,5 +1,5 @@
-import { useEffect, type MouseEvent as ReactMouseEvent } from "react";
-import { Minus, X, Square, ZoomIn, ZoomOut, Languages, Check } from "lucide-react";
+import { useEffect, type MouseEvent as ReactMouseEvent, type ReactNode } from "react";
+import { Minus, X, Square, ZoomIn, ZoomOut, Languages, Check, Sun, Moon, Search } from "lucide-react";
 import { useStudio } from "../lib/store";
 import { isInteractive, warmWindow, winAction } from "../lib/window";
 import { useContextMenu } from "./ContextMenu";
@@ -7,13 +7,24 @@ import { LANGS, useI18n } from "../lib/i18n";
 import logo from "../assets/logo.png";
 
 /**
- * Custom title bar.
+ * VS Code style title bar.
  *
  * The window is created with `decorations: false`, so this bar *is* the window
  * frame: it must be mounted on every screen (welcome screen included), otherwise
  * the window cannot be dragged or closed.
+ *
+ * Layout: brand · menus · command center · layout actions · theme/language/zoom
+ * · window controls.
  */
-export default function TitleBar({ title }: { title?: string }) {
+export default function TitleBar({
+  title,
+  menus,
+  actions,
+}: {
+  title?: string;
+  menus?: ReactNode;
+  actions?: ReactNode;
+}) {
   const s = useStudio();
   const ctx = useContextMenu();
   const { t, lang, setLang } = useI18n();
@@ -66,42 +77,72 @@ export default function TitleBar({ title }: { title?: string }) {
     ]);
   };
 
+  const isDark = s.theme === "dark";
+
   return (
     <div
-      className="drag-region flex items-center h-9 px-2 shrink-0 bg-darcula-bg border-b border-black/40 select-none text-2xs text-darcula-dim"
+      className="drag-region flex h-9 shrink-0 select-none items-center border-b border-ide-border bg-ide-titlebar pl-2 text-2xs text-ide-dim"
       onMouseDown={onMouseDown}
       onDoubleClick={onDoubleClick}
       onContextMenu={onContextMenu}
     >
-      <div className="no-drag flex items-center gap-2 w-48">
-        <img src={logo} alt={t("app.title")} className="w-5 h-5 rounded-md object-cover" />
-        <span className="text-darcula-text font-medium">{t("app.title")}</span>
+      <div className="no-drag flex shrink-0 items-center gap-2 pr-1">
+        <img src={logo} alt={t("app.title")} className="h-5 w-5 rounded-sm object-cover" />
       </div>
 
-      <div className="flex-1 text-center truncate px-4">{title ?? t("app.title")}</div>
+      {menus ? (
+        <div className="no-drag flex h-full shrink-0 items-center">{menus}</div>
+      ) : (
+        <span className="no-drag shrink-0 px-2 font-medium text-ide-text">{t("app.title")}</span>
+      )}
 
-      <div className="no-drag flex items-center gap-1">
+      {/* Command center — mirrors VS Code's centered search pill. */}
+      {menus ? (
+        <div className="flex min-w-0 flex-1 justify-center px-3">
+          <div className="flex h-6 w-full max-w-[560px] items-center justify-center gap-2 rounded-md border border-ide-border bg-ide-input/60 px-3 text-2xs text-ide-dim">
+            <Search size={12} className="shrink-0" />
+            <span className="truncate">{title ?? t("app.title")}</span>
+          </div>
+        </div>
+      ) : (
+        <div className="flex-1" />
+      )}
+
+      <div className="no-drag flex h-full shrink-0 items-center">
+        {actions}
+
+        <button
+          onClick={s.toggleTheme}
+          title={isDark ? t("common.themeLight") : t("common.themeDark")}
+          aria-label={t("common.theme")}
+          className="grid h-7 w-7 place-items-center rounded-sm text-ide-dim hover:bg-ide-hover hover:text-ide-text"
+        >
+          {isDark ? <Sun size={14} /> : <Moon size={14} />}
+        </button>
+
         <button
           onClick={openLangMenu}
           title={t("common.language")}
-          className="flex items-center gap-1 px-1.5 py-1 rounded hover:bg-white/10 hover:text-white"
+          className="flex h-7 items-center gap-1 rounded-sm px-1.5 text-ide-dim hover:bg-ide-hover hover:text-ide-text"
         >
           <Languages size={13} />
           <span className="text-[0.625rem] font-medium">{LANGS.find((l) => l.id === lang)?.short}</span>
         </button>
-        <div className="w-px h-4 bg-white/10 mx-1" />
+
+        <div className="mx-1 h-4 w-px bg-ide-border" />
+
         <button
           onClick={s.zoomOut}
           disabled={s.uiScale <= 0.85}
           title={`${t("common.zoomOut")} (Ctrl+-)`}
-          className="p-1 rounded hover:bg-white/10 disabled:opacity-40"
+          className="grid h-7 w-7 place-items-center rounded-sm hover:bg-ide-hover hover:text-ide-text disabled:opacity-40"
         >
           <ZoomOut size={13} />
         </button>
         <button
           onClick={s.resetZoom}
           title={`${t("common.resetZoom")} (Ctrl+0)`}
-          className="w-9 text-[0.625rem] tabular-nums hover:text-white"
+          className="h-7 w-9 rounded-sm text-[0.625rem] tabular-nums hover:bg-ide-hover hover:text-ide-text"
         >
           {Math.round(s.uiScale * 100)}%
         </button>
@@ -109,31 +150,31 @@ export default function TitleBar({ title }: { title?: string }) {
           onClick={s.zoomIn}
           disabled={s.uiScale >= 1.8}
           title={`${t("common.zoomIn")} (Ctrl+=)`}
-          className="p-1 rounded hover:bg-white/10 disabled:opacity-40"
+          className="grid h-7 w-7 place-items-center rounded-sm hover:bg-ide-hover hover:text-ide-text disabled:opacity-40"
         >
           <ZoomIn size={13} />
         </button>
 
-        <div className="w-px h-4 bg-white/10 mx-1" />
+        <div className="mx-1 h-4 w-px bg-ide-border" />
 
         <button
           onClick={() => winAction("minimize")}
           title={t("common.minimize")}
-          className="p-1.5 hover:bg-white/10 rounded"
+          className="grid h-9 w-11 place-items-center rounded-none hover:bg-ide-hover hover:text-ide-text"
         >
           <Minus size={14} />
         </button>
         <button
           onClick={() => winAction("toggleMaximize")}
           title={t("common.maximize")}
-          className="p-1.5 hover:bg-white/10 rounded"
+          className="grid h-9 w-11 place-items-center rounded-none hover:bg-ide-hover hover:text-ide-text"
         >
           <Square size={12} />
         </button>
         <button
           onClick={() => winAction("close")}
           title={t("common.close")}
-          className="p-1.5 hover:bg-red-500/80 hover:text-white rounded"
+          className="grid h-9 w-11 place-items-center rounded-none hover:bg-[#e81123] hover:text-white"
         >
           <X size={14} />
         </button>

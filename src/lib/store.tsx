@@ -14,6 +14,7 @@ import {
 } from "./api";
 import { useI18n } from "./i18n";
 import { checkNode, installNode } from "./node";
+import { applyTheme, readStoredTheme, type Theme } from "./theme";
 
 export type OpenFile = {
   path: string;
@@ -63,12 +64,14 @@ type StudioState = {
   buildResult: BuildDone | null;
   previewUrl: string | null;
   bottomTab: BottomTab;
+  bottomVisible: boolean;
   rightOpen: boolean;
   rightTab: RightTab;
   cursor: { line: number; col: number };
   dialog: null | "new" | "open";
   toast: string | null;
   uiScale: number;
+  theme: Theme;
   nodeDialog: NodeDialogState;
   nodeCanAutoInstall: boolean;
   nodeError: string | null;
@@ -90,8 +93,11 @@ type StudioState = {
   declineNodeInstall: () => void;
   closeNodeDialog: () => void;
   setBottomTab: (t: BottomTab) => void;
+  setBottomVisible: (v: boolean) => void;
   setRightOpen: (v: boolean) => void;
   setRightTab: (t: RightTab) => void;
+  setTheme: (t: Theme) => void;
+  toggleTheme: () => void;
   setUiScale: (n: number) => void;
   zoomIn: () => void;
   zoomOut: () => void;
@@ -124,12 +130,14 @@ export function StudioProvider({ children }: { children: React.ReactNode }) {
   const [buildResult, setBuildResult] = useState<BuildDone | null>(null);
   const [previewUrl, setPreviewUrl] = useState<string | null>(null);
   const [bottomTab, setBottomTab] = useState<BottomTab>("build");
+  const [bottomVisible, setBottomVisible] = useState(true);
   const [rightOpen, setRightOpen] = useState(true);
   const [rightTab, setRightTab] = useState<RightTab>("manifest");
   const [cursor, setCursor] = useState({ line: 1, col: 1 });
   const [dialog, setDialog] = useState<null | "new" | "open">(null);
   const [toast, setToast] = useState<string | null>(null);
   const [uiScale, setUiScale] = useState(readStoredScale);
+  const [theme, setThemeState] = useState<Theme>(readStoredTheme);
   const [nodeDialog, setNodeDialog] = useState<NodeDialogState>(null);
   const [nodeCanAutoInstall, setNodeCanAutoInstall] = useState(false);
   const [nodeError, setNodeError] = useState<string | null>(null);
@@ -155,6 +163,17 @@ export function StudioProvider({ children }: { children: React.ReactNode }) {
   const zoomIn = useCallback(() => setUiScale((s) => clampScale(s + UI_SCALE_STEP)), []);
   const zoomOut = useCallback(() => setUiScale((s) => clampScale(s - UI_SCALE_STEP)), []);
   const resetZoom = useCallback(() => setUiScale(UI_SCALE_DEFAULT), []);
+
+  // Apply + persist the theme. `data-theme` drives every token in index.css.
+  useEffect(() => {
+    applyTheme(theme);
+  }, [theme]);
+
+  const setTheme = useCallback((next: Theme) => setThemeState(next), []);
+  const toggleTheme = useCallback(
+    () => setThemeState((prev) => (prev === "dark" ? "light" : "dark")),
+    [],
+  );
 
   // Ctrl/Cmd + `+` / `-` / `0` — the shortcuts an IDE user expects.
   useEffect(() => {
@@ -452,11 +471,12 @@ export function StudioProvider({ children }: { children: React.ReactNode }) {
 
   const value: StudioState = {
     project, tree, recent, openFiles, activePath, buildLogs, buildRunning, buildResult,
-    previewUrl, bottomTab, rightOpen, rightTab, cursor, dialog, toast, uiScale,
+    previewUrl, bottomTab, bottomVisible, rightOpen, rightTab, cursor, dialog, toast, uiScale, theme,
     nodeDialog, nodeCanAutoInstall, nodeError,
     loadRecent, doOpenProject, doCreateProject, closeProject, refreshTree,
     openFile: openFilePath, closeTab, setActive, updateContent, saveFile, saveAll,
-    runBuild, runPreview, setBottomTab, setRightOpen, setRightTab, clearBuildLogs,
+    runBuild, runPreview, setBottomTab, setBottomVisible, setRightOpen, setRightTab, clearBuildLogs,
+    setTheme, toggleTheme,
     confirmNodeInstall, declineNodeInstall, closeNodeDialog,
     setUiScale: (n: number) => setUiScale(clampScale(n)),
     zoomIn, zoomOut, resetZoom,

@@ -2,6 +2,152 @@
 @tailwind components;
 @tailwind utilities;
 
+/*
+ * ---------------------------------------------------------------------------
+ * Themes
+ * ---------------------------------------------------------------------------
+ * Two VS Code inspired themes share one token set. Tokens are RGB channels so
+ * Tailwind can compose them with an alpha value (`bg-ide-editor/60`).
+ * `data-theme` is set on <html> by the studio store and persisted in
+ * localStorage under `qchat.theme`.
+ */
+:root,
+:root[data-theme="dark"] {
+  color-scheme: dark;
+
+  --ide-titlebar: 60 60 60; /* titleBar.activeBackground */
+  --ide-activity: 51 51 51; /* activityBar.background */
+  --ide-sidebar: 37 37 38; /* sideBar.background */
+  --ide-editor: 30 30 30; /* editor.background */
+  --ide-panel: 24 24 24; /* panel.background */
+  --ide-tabs: 37 37 38; /* editorGroupHeader.tabsBackground */
+  --ide-tab: 45 45 45; /* tab.inactiveBackground */
+  --ide-menu: 30 30 30; /* menu.background */
+  --ide-widget: 37 37 38; /* editorWidget.background */
+  --ide-input: 49 49 49; /* input.background */
+  --ide-border: 45 45 45; /* panel.border */
+  --ide-hover: 42 45 46; /* list.hoverBackground */
+  --ide-select: 4 57 94; /* list.activeSelectionBackground */
+  --ide-select-inactive: 55 55 61; /* list.inactiveSelectionBackground */
+  --ide-text: 204 204 204; /* foreground */
+  --ide-dim: 157 157 157; /* descriptionForeground */
+  --ide-accent: 0 120 212; /* focusBorder */
+  --ide-button: 14 99 156; /* button.background */
+  --ide-button-hover: 17 119 187; /* button.hoverBackground */
+  --ide-status: 0 120 212; /* statusBar.background */
+  --ide-status-text: 255 255 255;
+  --ide-blue: 86 156 214;
+  --ide-green: 137 209 133;
+  --ide-red: 241 76 76;
+  --ide-orange: 206 145 120;
+  --ide-yellow: 220 220 170;
+  --ide-purple: 197 134 192;
+  --ide-gray: 106 153 85;
+  --ide-modified: 226 192 141; /* tab.activeModifiedBorder */
+  --ide-scrollbar: 121 121 121;
+  --ide-scrollbar-hover: 150 150 150;
+
+  --cm-bg: #1e1e1e;
+  --cm-fg: #d4d4d4;
+  --cm-gutter-bg: #1e1e1e;
+  --cm-gutter-fg: #858585;
+  --cm-active-line: #2a2d2e;
+  --cm-active-gutter: #1e1e1e;
+  --cm-active-gutter-fg: #c6c6c6;
+  --cm-selection: #264f78;
+  --cm-selection-match: #3a3d41;
+  --cm-cursor: #aeafad;
+  --cm-tooltip-bg: #252526;
+  --cm-tooltip-border: #454545;
+  --cm-search-match: #613214;
+  --cm-search-match-selected: #9e6a03;
+  --cm-bracket: #04395e;
+  --cm-bracket-border: #0078d4;
+
+  --cm-keyword: #569cd6;
+  --cm-control: #c586c0;
+  --cm-string: #ce9178;
+  --cm-number: #b5cea8;
+  --cm-comment: #6a9955;
+  --cm-function: #dcdcaa;
+  --cm-variable: #9cdcfe;
+  --cm-type: #4ec9b0;
+  --cm-property: #9cdcfe;
+  --cm-tag: #569cd6;
+  --cm-attribute: #9cdcfe;
+  --cm-meta: #c586c0;
+  --cm-invalid: #f44747;
+  --cm-link: #3794ff;
+}
+
+:root[data-theme="light"] {
+  color-scheme: light;
+
+  --ide-titlebar: 221 221 221;
+  --ide-activity: 248 248 248;
+  --ide-sidebar: 243 243 243;
+  --ide-editor: 255 255 255;
+  --ide-panel: 255 255 255;
+  --ide-tabs: 243 243 243;
+  --ide-tab: 236 236 236;
+  --ide-menu: 252 252 252;
+  --ide-widget: 252 252 252;
+  --ide-input: 255 255 255;
+  --ide-border: 227 227 227;
+  --ide-hover: 230 230 230;
+  --ide-select: 0 96 192;
+  --ide-select-inactive: 228 230 241;
+  --ide-text: 59 59 59;
+  --ide-dim: 113 113 113;
+  --ide-accent: 0 95 184;
+  --ide-button: 0 95 184;
+  --ide-button-hover: 2 88 168;
+  --ide-status: 0 120 212;
+  --ide-status-text: 255 255 255;
+  --ide-blue: 4 81 165;
+  --ide-green: 56 138 52;
+  --ide-red: 205 49 49;
+  --ide-orange: 183 107 1;
+  --ide-yellow: 154 103 0;
+  --ide-purple: 175 0 219;
+  --ide-gray: 0 128 0;
+  --ide-modified: 137 85 3;
+  --ide-scrollbar: 100 100 100;
+  --ide-scrollbar-hover: 70 70 70;
+
+  --cm-bg: #ffffff;
+  --cm-fg: #000000;
+  --cm-gutter-bg: #ffffff;
+  --cm-gutter-fg: #237893;
+  --cm-active-line: #f3f3f3;
+  --cm-active-gutter: #ffffff;
+  --cm-active-gutter-fg: #0b216f;
+  --cm-selection: #add6ff;
+  --cm-selection-match: #e5ebf1;
+  --cm-cursor: #000000;
+  --cm-tooltip-bg: #f3f3f3;
+  --cm-tooltip-border: #c8c8c8;
+  --cm-search-match: #a8ac94;
+  --cm-search-match-selected: #ea5c00;
+  --cm-bracket: #d6e6f5;
+  --cm-bracket-border: #005fb8;
+
+  --cm-keyword: #0000ff;
+  --cm-control: #af00db;
+  --cm-string: #a31515;
+  --cm-number: #098658;
+  --cm-comment: #008000;
+  --cm-function: #795e26;
+  --cm-variable: #001080;
+  --cm-type: #267f99;
+  --cm-property: #001080;
+  --cm-tag: #800000;
+  --cm-attribute: #e50000;
+  --cm-meta: #af00db;
+  --cm-invalid: #cd3131;
+  --cm-link: #0451a5;
+}
+
 html,
 body,
 #root {
@@ -9,8 +155,8 @@ body,
   margin: 0;
   padding: 0;
   overflow: hidden;
-  background: #3c3f41;
-  color: #bbbbbb;
+  background: rgb(var(--ide-editor));
+  color: rgb(var(--ide-text));
   font-family: "Inter", "Segoe UI", system-ui, sans-serif;
   -webkit-font-smoothing: antialiased;
   user-select: none;
@@ -37,30 +183,34 @@ body,
   box-sizing: border-box;
 }
 
-/* Darcula scrollbars */
+/* VS Code style scrollbars: thin, translucent, overlay-looking. */
 ::-webkit-scrollbar {
-  width: 12px;
-  height: 12px;
+  width: 14px;
+  height: 14px;
 }
 ::-webkit-scrollbar-track {
-  background: #2b2b2b;
+  background: transparent;
 }
 ::-webkit-scrollbar-thumb {
-  background: #56595c;
-  border: 3px solid #2b2b2b;
-  border-radius: 8px;
+  background: rgb(var(--ide-scrollbar) / 0.35);
+  background-clip: content-box;
+  border: 3px solid transparent;
+  border-radius: 7px;
 }
 ::-webkit-scrollbar-thumb:hover {
-  background: #6b6f73;
+  background: rgb(var(--ide-scrollbar) / 0.65);
+  background-clip: content-box;
 }
 ::-webkit-scrollbar-corner {
-  background: #2b2b2b;
+  background: transparent;
 }
 
-/* CodeMirror Darcula */
+/* ---------------------------------------------------------------------------
+ * CodeMirror: colors come from the theme tokens so light/dark follow the app.
+ * ------------------------------------------------------------------------- */
 .cm-editor {
   height: 100%;
-  background: #2b2b2b;
+  background: var(--cm-bg);
   font-family: "JetBrains Mono", "Fira Code", Consolas, monospace;
   font-size: 0.8125rem; /* 13px at 100% zoom */
   line-height: 1.6;
@@ -69,52 +219,85 @@ body,
   font-family: "JetBrains Mono", "Fira Code", Consolas, monospace;
   overflow: auto;
 }
-.cm-editor .cm-gutters {
-  background: #313335;
-  color: #606366;
-  border-right: 1px solid #323232;
-  font-family: "JetBrains Mono", monospace;
-}
-.cm-editor .cm-activeLineGutter {
-  background: #323232;
-  color: #a4a3a3;
-}
-.cm-editor .cm-activeLine {
-  background: #323232;
-}
-.cm-editor .cm-selectionBackground,
-.cm-editor.cm-focused .cm-selectionBackground {
-  background: #214283 !important;
-}
-.cm-editor .cm-cursor {
-  border-left-color: #ffffff;
-}
-.cm-editor .cm-matchingBracket {
-  background: #3a5a3a;
-  outline: 1px solid #59a869;
-}
-.cm-editor .cm-tooltip {
-  background: #3c3f41;
-  border: 1px solid #4b4f52;
-  color: #bbbbbb;
-}
-.cm-editor .cm-completionIcon {
-  opacity: 0.7;
-}
 .cm-editor .cm-panel.cm-search {
-  background: #3c3f41;
-  color: #bbbbbb;
-  border-top: 1px solid #323232;
+  background: rgb(var(--ide-panel));
+  color: rgb(var(--ide-text));
+  border-top: 1px solid rgb(var(--ide-border));
+  font-family: "Inter", "Segoe UI", system-ui, sans-serif;
+  font-size: 0.75rem;
+  padding: 4px 6px;
 }
-.cm-editor .cm-panel input {
-  background: #2b2b2b;
-  border: 1px solid #4b4f52;
-  color: #bbbbbb;
-  border-radius: 3px;
+.cm-editor .cm-panel.cm-search input,
+.cm-editor .cm-panel.cm-search button {
+  background: rgb(var(--ide-input));
+  border: 1px solid rgb(var(--ide-border));
+  border-radius: 2px;
+  color: rgb(var(--ide-text));
   padding: 2px 6px;
+  font-family: inherit;
+}
+.cm-editor .cm-panel.cm-search input:focus {
+  border-color: rgb(var(--ide-accent));
+  outline: none;
+}
+.cm-editor .cm-panel.cm-search button:hover {
+  background: rgb(var(--ide-hover));
+}
+.cm-editor .cm-searchMatch {
+  outline: 1px solid rgb(var(--ide-accent));
 }
 .cm-editor .cm-foldGutter span {
-  color: #808080;
+  color: var(--cm-gutter-fg);
+}
+
+/* ---------------------------------------------------------------------------
+ * Shared controls (dialogs, forms) — VS Code look, theme aware.
+ * ------------------------------------------------------------------------- */
+.ide-input {
+  width: 100%;
+  background: rgb(var(--ide-input));
+  border: 1px solid rgb(var(--ide-border));
+  border-radius: 2px;
+  padding: 0.375rem 0.5rem;
+  color: rgb(var(--ide-text));
+  font-size: 0.75rem;
+  outline: none;
+}
+.ide-input::placeholder {
+  color: rgb(var(--ide-dim));
+}
+.ide-input:focus {
+  border-color: rgb(var(--ide-accent));
+}
+
+.ide-btn {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 0.375rem;
+  padding: 0.375rem 0.75rem;
+  background: rgb(var(--ide-hover));
+  border: 1px solid rgb(var(--ide-border));
+  border-radius: 2px;
+  color: rgb(var(--ide-text));
+  font-size: 0.75rem;
+  cursor: pointer;
+}
+.ide-btn:hover {
+  background: rgb(var(--ide-select-inactive));
+}
+.ide-btn:disabled {
+  opacity: 0.4;
+  cursor: default;
+}
+
+.ide-btn-primary {
+  background: rgb(var(--ide-button));
+  border-color: transparent;
+  color: #ffffff;
+}
+.ide-btn-primary:hover {
+  background: rgb(var(--ide-button-hover));
 }
 
 input,
@@ -123,13 +306,17 @@ select {
   user-select: text;
 }
 
+input[type="checkbox"] {
+  accent-color: rgb(var(--ide-accent));
+}
+
 button {
   font-family: inherit;
 }
 
 /*
  * Window dragging is implemented in JS (`onTitleBarMouseDown` in
- * components/TopBar.tsx): the window is created with `decorations: false`, and
+ * components/TitleBar.tsx): the window is created with `decorations: false`, and
  * Tauri (WebView2 / WebKitGTK) ignores Electron's `-webkit-app-region` API.
  * `.drag-region` and `.no-drag` therefore stay as plain selectors used by that
  * handler — `.no-drag` marks interactive areas (window buttons, menu bar) that

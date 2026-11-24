@@ -4,27 +4,41 @@ export default {
   theme: {
     extend: {
       colors: {
-        // IntelliJ Darcula palette
-        darcula: {
-          bg: "#3C3F41",
-          panel: "#313335",
-          editor: "#2B2B2B",
-          border: "#323232",
-          lighter: "#4B4F52",
-          hover: "#4B6EAF",
-          select: "#214283",
-          selectInactive: "#0D293E",
-          text: "#BBBBBB",
-          dim: "#808080",
-          accent: "#4E94CE",
-          green: "#59A869",
-          red: "#E05555",
-          orange: "#C77B3E",
-          yellow: "#BBB529",
-          purple: "#9876AA",
-          blue: "#6897BB",
-          gray: "#6A8759",
-          modified: "#4E94CE",
+        /*
+         * VS Code inspired palette. Every token is a CSS variable holding
+         * space-separated RGB channels, so `bg-ide-editor/60` and friends keep
+         * working while `:root[data-theme="light"]` swaps the whole theme.
+         */
+        ide: {
+          titlebar: "rgb(var(--ide-titlebar) / <alpha-value>)",
+          activity: "rgb(var(--ide-activity) / <alpha-value>)",
+          sidebar: "rgb(var(--ide-sidebar) / <alpha-value>)",
+          editor: "rgb(var(--ide-editor) / <alpha-value>)",
+          panel: "rgb(var(--ide-panel) / <alpha-value>)",
+          tabs: "rgb(var(--ide-tabs) / <alpha-value>)",
+          tab: "rgb(var(--ide-tab) / <alpha-value>)",
+          menu: "rgb(var(--ide-menu) / <alpha-value>)",
+          widget: "rgb(var(--ide-widget) / <alpha-value>)",
+          input: "rgb(var(--ide-input) / <alpha-value>)",
+          border: "rgb(var(--ide-border) / <alpha-value>)",
+          hover: "rgb(var(--ide-hover) / <alpha-value>)",
+          select: "rgb(var(--ide-select) / <alpha-value>)",
+          "select-inactive": "rgb(var(--ide-select-inactive) / <alpha-value>)",
+          text: "rgb(var(--ide-text) / <alpha-value>)",
+          dim: "rgb(var(--ide-dim) / <alpha-value>)",
+          accent: "rgb(var(--ide-accent) / <alpha-value>)",
+          button: "rgb(var(--ide-button) / <alpha-value>)",
+          "button-hover": "rgb(var(--ide-button-hover) / <alpha-value>)",
+          status: "rgb(var(--ide-status) / <alpha-value>)",
+          "status-text": "rgb(var(--ide-status-text) / <alpha-value>)",
+          blue: "rgb(var(--ide-blue) / <alpha-value>)",
+          green: "rgb(var(--ide-green) / <alpha-value>)",
+          red: "rgb(var(--ide-red) / <alpha-value>)",
+          orange: "rgb(var(--ide-orange) / <alpha-value>)",
+          yellow: "rgb(var(--ide-yellow) / <alpha-value>)",
+          purple: "rgb(var(--ide-purple) / <alpha-value>)",
+          gray: "rgb(var(--ide-gray) / <alpha-value>)",
+          modified: "rgb(var(--ide-modified) / <alpha-value>)",
         },
       },
       fontFamily: {

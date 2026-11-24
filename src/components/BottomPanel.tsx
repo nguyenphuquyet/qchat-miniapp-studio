@@ -1,6 +1,6 @@
 import { useEffect, useRef } from "react";
 import {
-  Hammer, Play, TerminalSquare, ChevronUp, CheckCircle2,
+  Hammer, Play, TerminalSquare, ChevronDown, CheckCircle2,
   XCircle, Loader2, Package, ClipboardCopy, Eraser, FolderOpen,
 } from "lucide-react";
 import { useStudio } from "../lib/store";
@@ -59,72 +59,72 @@ export default function BottomPanel({ onHide }: { onHide: () => void }) {
   };
 
   return (
-    <div className="h-full flex flex-col bg-darcula-panel border-t border-black/40">
-      <div className="flex items-center h-7 px-1 border-b border-black/30 shrink-0">
+    <div className="flex h-full flex-col border-t border-ide-border bg-ide-panel">
+      <div className="flex h-9 shrink-0 items-center border-b border-ide-border px-1">
         {TABS.map((tab) => (
           <button
             key={tab.id}
             onClick={() => s.setBottomTab(tab.id)}
-            className={`flex items-center gap-1.5 px-3 h-7 text-2xs border-b-2 ${
+            className={`flex h-full items-center gap-1.5 border-b-2 px-3 text-2xs uppercase tracking-wide ${
               s.bottomTab === tab.id
-                ? "text-white border-darcula-modified"
-                : "text-darcula-dim border-transparent hover:text-darcula-text"
+                ? "border-ide-accent text-ide-text"
+                : "border-transparent text-ide-dim hover:text-ide-text"
             }`}
           >
-            <tab.icon size={12} />
+            <tab.icon size={13} />
             {t(tab.labelKey)}
-            {tab.id === "build" && s.buildRunning && <Loader2 size={11} className="animate-spin text-darcula-accent" />}
-            {tab.id === "build" && !s.buildRunning && s.buildResult?.success && <CheckCircle2 size={11} className="text-darcula-green" />}
-            {tab.id === "build" && !s.buildRunning && s.buildResult && !s.buildResult.success && <XCircle size={11} className="text-darcula-red" />}
+            {tab.id === "build" && s.buildRunning && <Loader2 size={11} className="animate-spin text-ide-accent" />}
+            {tab.id === "build" && !s.buildRunning && s.buildResult?.success && <CheckCircle2 size={11} className="text-ide-green" />}
+            {tab.id === "build" && !s.buildRunning && s.buildResult && !s.buildResult.success && <XCircle size={11} className="text-ide-red" />}
           </button>
         ))}
         <div className="flex-1" />
         {s.buildResult?.zip_path && (
-          <span className="flex items-center gap-1 text-2xs text-darcula-green mr-2">
+          <span className="mr-2 flex items-center gap-1 text-2xs text-ide-green">
             <Package size={12} />
             <span className="max-w-[240px] truncate">{t("bottom.package", { path: s.buildResult.zip_path.split(/[\\/]/).pop() ?? "" })}</span>
-            <button className="p-0.5 hover:bg-white/10 rounded" title={t("bottom.openFolder")} onClick={openBuildFolder}>
+            <button className="rounded-sm p-0.5 hover:bg-ide-hover" title={t("bottom.openFolder")} onClick={openBuildFolder}>
               <FolderOpen size={12} />
             </button>
           </span>
         )}
-        <button className="p-1 hover:bg-white/10 rounded" onClick={onHide} title={t("common.hide")}>
-          <ChevronUp size={13} className="text-darcula-dim" />
+        <button className="grid h-6 w-6 place-items-center rounded-sm hover:bg-ide-hover" onClick={onHide} title={t("common.hide")}>
+          <ChevronDown size={14} className="text-ide-dim" />
         </button>
       </div>
 
-      <div className="flex-1 min-h-0 overflow-hidden">
+      <div className="min-h-0 flex-1 overflow-hidden">
         {s.bottomTab === "build" && (
           <div ref={logRef} className="h-full overflow-auto p-2 font-mono text-2xs leading-relaxed" onContextMenu={onLogContextMenu}>
             {s.buildLogs.length === 0 && !s.buildRunning && (
-              <div className="text-darcula-dim">{t("bottom.buildHint")}</div>
+              <div className="text-ide-dim">{t("bottom.buildHint")}</div>
             )}
             {s.buildLogs.map((l, i) => (
               <div
                 key={i}
                 className={
-                  l.stream === "stderr" ? "text-red-400" :
-                  l.stream === "error" ? "text-red-400 font-semibold" :
-                  l.stream === "info" ? "text-darcula-accent font-semibold" :
-                  "text-darcula-text"
+                  l.stream === "stderr" ? "text-ide-red" :
+                  l.stream === "error" ? "font-semibold text-ide-red" :
+                  l.stream === "info" ? "font-semibold text-ide-blue" :
+                  "text-ide-text"
                 }
               >
-                <span className="text-darcula-dim/50 mr-2 select-none">{String(i + 1).padStart(3, " ")}</span>
+                <span className="mr-2 select-none text-ide-dim/60">{String(i + 1).padStart(3, " ")}</span>
                 {l.line || "\u00A0"}
               </div>
             ))}
             {s.buildRunning && (
-              <div className="flex items-center gap-2 text-darcula-accent mt-1">
+              <div className="mt-1 flex items-center gap-2 text-ide-blue">
                 <Loader2 size={12} className="animate-spin" /> {t("bottom.building")}
               </div>
             )}
             {s.buildResult && (
-              <div className={`mt-2 flex items-center gap-2 font-semibold ${s.buildResult.success ? "text-darcula-green" : "text-darcula-red"}`}>
+              <div className={`mt-2 flex items-center gap-2 font-semibold ${s.buildResult.success ? "text-ide-green" : "text-ide-red"}`}>
                 {s.buildResult.success ? <CheckCircle2 size={14} /> : <XCircle size={14} />}
                 {t(s.buildResult.success ? "bottom.buildSucceeded" : "bottom.buildFailed")}
                 {s.buildResult.success && (
                   <button
-                    className="ml-2 flex items-center gap-1 px-2 py-0.5 rounded bg-white/10 hover:bg-white/20 text-white font-normal"
+                    className="ide-btn ml-2 px-2 py-0.5 font-normal"
                     onClick={openBuildFolder}
                   >
                     <FolderOpen size={12} /> {t("bottom.openFolder")}
@@ -136,16 +136,16 @@ export default function BottomPanel({ onHide }: { onHide: () => void }) {
         )}
 
         {s.bottomTab === "run" && (
-          <div className="p-3 text-2xs text-darcula-dim font-mono">
-            <div className="text-darcula-green">$ npm run dev</div>
+          <div className="p-3 font-mono text-2xs text-ide-dim">
+            <div className="text-ide-green">$ npm run dev</div>
             <div className="mt-1">{t("bottom.runHint")}</div>
           </div>
         )}
 
         {s.bottomTab === "terminal" && (
-          <div className="p-3 text-2xs text-darcula-text font-mono" onContextMenu={onLogContextMenu}>
-            <div><span className="text-darcula-green">user@qchat-studio</span>:<span className="text-darcula-accent">~/project</span>$ _</div>
-            <div className="text-darcula-dim mt-2">{t("bottom.terminalHint")}</div>
+          <div className="p-3 font-mono text-2xs text-ide-text" onContextMenu={onLogContextMenu}>
+            <div><span className="text-ide-green">user@qchat-studio</span>:<span className="text-ide-blue">~/project</span>$ _</div>
+            <div className="mt-2 text-ide-dim">{t("bottom.terminalHint")}</div>
           </div>
         )}
       </div>

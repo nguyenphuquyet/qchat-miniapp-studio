@@ -1,12 +1,9 @@
 import { useEffect, useRef, useState } from "react";
-import {
-  FolderTree, Braces, GitBranch, Hammer, Smartphone, ChevronDown,
-} from "lucide-react";
+import { Files, Search, GitBranch, Play, Puzzle, Settings, CircleUser } from "lucide-react";
 import { useStudio } from "./lib/store";
 import { api } from "./lib/api";
 import { useI18n } from "./lib/i18n";
 import TopBar from "./components/TopBar";
-import TitleBar from "./components/TitleBar";
 import ProjectTree from "./components/ProjectTree";
 import EditorArea from "./components/EditorArea";
 import BottomPanel from "./components/BottomPanel";
@@ -16,13 +13,14 @@ import NewProjectDialog from "./components/NewProjectDialog";
 import NodeInstallDialog from "./components/NodeInstallDialog";
 import RightPanel from "./components/RightPanel";
 
+const ACTIVITY_W = 48;
+
 export default function App() {
   const s = useStudio();
   const { t } = useI18n();
   const [leftW, setLeftW] = useState(240);
   const [rightW, setRightW] = useState(300);
   const [bottomH, setBottomH] = useState(230);
-  const [bottomVisible, setBottomVisible] = useState(true);
   const dragging = useRef<null | "left" | "right" | "bottom">(null);
 
   // Handle "Open Project" dialog from anywhere (menu / welcome).
@@ -39,7 +37,7 @@ export default function App() {
   useEffect(() => {
     const onMove = (e: MouseEvent) => {
       if (!dragging.current) return;
-      if (dragging.current === "left") setLeftW(Math.max(160, Math.min(480, e.clientX - 28)));
+      if (dragging.current === "left") setLeftW(Math.max(160, Math.min(480, e.clientX - ACTIVITY_W)));
       if (dragging.current === "right") setRightW(Math.max(240, Math.min(640, window.innerWidth - e.clientX)));
       if (dragging.current === "bottom") setBottomH(Math.max(120, Math.min(500, window.innerHeight - e.clientY - 24)));
     };
@@ -59,11 +57,11 @@ export default function App() {
 
   if (!s.project) {
     return (
-      <div className="h-screen flex flex-col overflow-hidden">
+      <div className="flex h-screen flex-col overflow-hidden bg-ide-editor">
         {/* The window has `decorations: false`, so the title bar is the frame:
             it must stay mounted on the welcome screen too. */}
-        <TitleBar />
-        <div className="flex-1 min-h-0">
+        <TopBar />
+        <div className="min-h-0 flex-1">
           <WelcomeScreen />
         </div>
         <NewProjectDialog />
@@ -72,90 +70,79 @@ export default function App() {
     );
   }
 
-  const stripIcon = (Icon: any, active: boolean, title: string, onClick: () => void) => (
+  const activity = (Icon: any, active: boolean, title: string, onClick: () => void) => (
     <button
       key={title}
       title={title}
       onClick={onClick}
-      className={`w-7 h-7 grid place-items-center border-l-2 ${active ? "border-darcula-accent text-white bg-white/5" : "border-transparent text-darcula-dim hover:text-white"}`}
+      className={`relative grid h-12 w-12 shrink-0 place-items-center border-l-2 transition-colors ${
+        active
+          ? "border-ide-accent text-ide-text"
+          : "border-transparent text-ide-dim hover:text-ide-text"
+      }`}
     >
-      <Icon size={15} />
+      <Icon size={22} strokeWidth={1.6} />
     </button>
   );
 
   return (
-    <div className="h-screen flex flex-col overflow-hidden">
+    <div className="flex h-screen flex-col overflow-hidden bg-ide-editor text-ide-text">
       <TopBar />
 
-      <div className="flex-1 flex min-h-0">
-        {/* Left tool strip */}
-        <div className="w-7 bg-darcula-panel border-r border-black/40 flex flex-col items-center py-1 gap-0.5 shrink-0">
-          {stripIcon(FolderTree, true, t("tree.title"), () => {})}
-          {stripIcon(Braces, false, t("strip.structure"), () => s.showToast(t("toast.structureSoon")))}
-          {stripIcon(GitBranch, false, "Git", () => s.showToast(t("toast.gitSoon")))}
-          <div className="flex-1" />
-          {stripIcon(Hammer, bottomVisible && s.bottomTab === "build", t("bottom.tab.build"), () => { setBottomVisible(true); s.setBottomTab("build"); })}
-          {stripIcon(Smartphone, s.rightOpen && s.rightTab === "preview", t("bottom.tab.preview"), () => {
-            s.setRightOpen(true);
-            s.setRightTab("preview");
-            if (!s.previewUrl) void s.runPreview();
+      <div className="flex min-h-0 flex-1">
+        {/* Activity bar */}
+        <div className="flex w-12 shrink-0 flex-col items-center bg-ide-activity">
+          {activity(Files, true, t("tree.title"), () => {})}
+          {activity(Search, false, t("toolbar.searchEverywhere"), () => s.showToast(t("toolbar.searchEverywhere")))}
+          {activity(GitBranch, false, "Source Control", () => s.showToast(t("toast.gitSoon")))}
+          {activity(Play, false, "Run and Debug", () => {
+            s.setBottomVisible(true);
+            s.setBottomTab("build");
           })}
-          <button
-            title={bottomVisible ? t("strip.hideTools") : t("strip.showTools")}
-            onClick={() => setBottomVisible((v) => !v)}
-            className="w-7 h-7 grid place-items-center text-darcula-dim hover:text-white"
-          >
-            <ChevronDown size={15} className={bottomVisible ? "" : "rotate-180"} />
-          </button>
+          {activity(Puzzle, false, "Extensions", () => s.showToast(t("toast.structureSoon")))}
+          <div className="flex-1" />
+          {activity(Settings, false, "Settings", () => s.showToast("Settings"))}
+          {activity(CircleUser, false, "Accounts", () => s.showToast("Accounts"))}
         </div>
 
-        {/* Project tree */}
-        <div style={{ width: leftW }} className="shrink-0 min-w-0">
+        {/* Explorer side bar */}
+        <div style={{ width: leftW }} className="min-w-0 shrink-0">
           <ProjectTree />
         </div>
         <div
-          className="w-1 cursor-col-resize bg-transparent hover:bg-darcula-accent/50 shrink-0"
+          className="w-1 shrink-0 cursor-col-resize bg-transparent transition-colors hover:bg-ide-accent/60"
           onMouseDown={() => (dragging.current = "left")}
         />
 
-        {/* Center: editor + bottom */}
-        <div className="flex-1 flex flex-col min-w-0">
-          <div className="flex-1 min-h-0">
+        {/* Center: editor + panel */}
+        <div className="flex min-w-0 flex-1 flex-col">
+          <div className="min-h-0 flex-1">
             <EditorArea />
           </div>
-          {bottomVisible && (
+          {s.bottomVisible && (
             <div
-              className="h-1 cursor-row-resize bg-transparent hover:bg-darcula-accent/50 shrink-0"
+              className="h-1 shrink-0 cursor-row-resize bg-transparent transition-colors hover:bg-ide-accent/60"
               onMouseDown={() => (dragging.current = "bottom")}
             />
           )}
-          {bottomVisible && (
-            <div style={{ height: bottomH }} className="shrink-0 min-h-0">
-              <BottomPanel onHide={() => setBottomVisible(false)} />
+          {s.bottomVisible && (
+            <div style={{ height: bottomH }} className="min-h-0 shrink-0">
+              <BottomPanel onHide={() => s.setBottomVisible(false)} />
             </div>
           )}
         </div>
 
-        {/* Right tool window: Manifest + Preview */}
+        {/* Secondary side bar: Manifest + Preview */}
         {s.rightOpen && (
           <>
             <div
-              className="w-1 cursor-col-resize bg-transparent hover:bg-darcula-accent/50 shrink-0"
+              className="w-1 shrink-0 cursor-col-resize bg-transparent transition-colors hover:bg-ide-accent/60"
               onMouseDown={() => (dragging.current = "right")}
             />
-            <div style={{ width: rightW }} className="shrink-0 min-w-0">
+            <div style={{ width: rightW }} className="min-w-0 shrink-0">
               <RightPanel onClose={() => s.setRightOpen(false)} />
             </div>
           </>
-        )}
-        {!s.rightOpen && (
-          <button
-            className="w-6 bg-darcula-panel border-l border-black/40 text-darcula-dim hover:text-white text-2xs [writing-mode:vertical-rl] flex items-center justify-center gap-2"
-            onClick={() => s.setRightOpen(true)}
-            title={t("manifest.show")}
-          >
-            <Braces size={12} /> Manifest
-          </button>
         )}
       </div>
 
@@ -169,7 +156,7 @@ export default function App() {
 
 function Toast({ msg }: { msg: string }) {
   return (
-    <div className="fixed bottom-10 left-1/2 -translate-x-1/2 z-[60] px-4 py-2 rounded bg-[#214283] text-white text-xs shadow-2xl border border-darcula-accent/40">
+    <div className="fixed bottom-10 left-1/2 z-[60] -translate-x-1/2 rounded-sm border border-ide-border bg-ide-widget px-4 py-2 text-xs text-ide-text shadow-xl">
       {msg}
     </div>
   );

@@ -1,64 +1,80 @@
-import { useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import {
-  Play, Bug, Hammer, ChevronDown, Search, Settings,
-  FolderOpen, FilePlus2, Save, SaveAll, Undo2, Redo2, FileCode2, Smartphone,
+  FilePlus2, FolderOpen, Save, SaveAll, Undo2, Redo2, FileCode2,
+  Sun, Moon, Play, Smartphone, Package, RefreshCw, Info, Check,
+  PanelBottom, PanelRight,
 } from "lucide-react";
 import { useStudio } from "../lib/store";
 import TitleBar from "./TitleBar";
 import { useI18n, type I18nKey } from "../lib/i18n";
+import { editorRedo, editorUndo } from "../lib/editorActions";
 
-type MenuItem = { key?: I18nKey; icon?: any; action?: string; sep?: boolean };
+type MenuItem = {
+  key?: I18nKey;
+  icon?: any;
+  action?: string;
+  shortcut?: string;
+  checked?: boolean;
+  sep?: boolean;
+};
 
-const MENUS: { id: string; key: I18nKey; items: MenuItem[] }[] = [
+type MenuGroup = { id: string; key: I18nKey; items: MenuItem[] };
+
+/** VS Code style menu bar. Placeholder items stay disabled instead of pretending to work. */
+const MENUS: MenuGroup[] = [
   {
     id: "file", key: "menu.file", items: [
       { key: "menu.file.new", icon: FilePlus2, action: "new" },
       { key: "menu.file.open", icon: FolderOpen, action: "open" },
       { sep: true },
-      { key: "common.save", icon: Save, action: "save" },
-      { key: "common.saveAll", icon: SaveAll, action: "saveAll" },
+      { key: "common.save", icon: Save, action: "save", shortcut: "Ctrl+S" },
+      { key: "common.saveAll", icon: SaveAll, action: "saveAll", shortcut: "Ctrl+Shift+S" },
       { sep: true },
       { key: "menu.file.closeProject", icon: FileCode2, action: "closeProject" },
     ],
   },
   {
     id: "edit", key: "menu.edit", items: [
-      { key: "common.undo", icon: Undo2, action: "undo" },
-      { key: "common.redo", icon: Redo2, action: "redo" },
+      { key: "common.undo", icon: Undo2, action: "undo", shortcut: "Ctrl+Z" },
+      { key: "common.redo", icon: Redo2, action: "redo", shortcut: "Ctrl+Y" },
     ],
   },
   {
     id: "view", key: "menu.view", items: [
-      { key: "menu.view.toolWindows", action: "" },
-      { key: "menu.view.appearance", action: "" },
-    ],
-  },
-  { id: "navigate", key: "menu.navigate", items: [{ key: "menu.navigate.searchEverywhere", action: "" }] },
-  { id: "code", key: "menu.code", items: [{ key: "menu.code.overrideMethods", action: "" }] },
-  { id: "analyze", key: "menu.analyze", items: [{ key: "menu.analyze.inspectCode", action: "" }] },
-  { id: "refactor", key: "menu.refactor", items: [{ key: "menu.refactor.rename", action: "" }] },
-  {
-    id: "build", key: "menu.build", items: [
-      { key: "menu.build.zip", icon: Hammer, action: "build" },
-      { key: "menu.build.rebuild", action: "build" },
+      { key: "common.themeDark", icon: Moon, action: "themeDark" },
+      { key: "common.themeLight", icon: Sun, action: "themeLight" },
+      { sep: true },
+      { key: "common.panel", icon: PanelBottom, action: "togglePanel" },
+      { key: "bottom.tab.preview", icon: PanelRight, action: "togglePreview" },
     ],
   },
   {
     id: "run", key: "menu.run", items: [
       { key: "menu.run.app", icon: Play, action: "run" },
       { key: "menu.run.preview", icon: Smartphone, action: "preview" },
+      { sep: true },
+      { key: "menu.build.zip", icon: Package, action: "build" },
+      { key: "menu.build.rebuild", icon: RefreshCw, action: "build" },
     ],
   },
-  { id: "tools", key: "menu.tools", items: [{ key: "menu.tools.sdkManager", action: "" }] },
-  { id: "vcs", key: "menu.vcs", items: [{ key: "menu.vcs.createRepo", action: "" }] },
-  { id: "window", key: "menu.window", items: [{ key: "menu.window.restoreLayout", action: "" }] },
-  { id: "help", key: "menu.help", items: [{ key: "menu.help.about", action: "about" }] },
+  { id: "help", key: "menu.help", items: [{ key: "menu.help.about", icon: Info, action: "about" }] },
 ];
 
 export default function TopBar() {
   const s = useStudio();
   const { t } = useI18n();
   const [openMenu, setOpenMenu] = useState<string | null>(null);
+  const rootRef = useRef<HTMLDivElement>(null);
+
+  // Clicking anywhere outside the menu bar dismisses the open menu.
+  useEffect(() => {
+    if (!openMenu) return;
+    const onDown = (e: MouseEvent) => {
+      if (!rootRef.current?.contains(e.target as Node)) setOpenMenu(null);
+    };
+    document.addEventListener("mousedown", onDown);
+    return () => document.removeEventListener("mousedown", onDown);
+  }, [openMenu]);
 
   const runAction = (action?: string) => {
     setOpenMenu(null);
@@ -66,106 +82,97 @@ export default function TopBar() {
     switch (action) {
       case "new": s.setDialog("new"); break;
       case "open": s.setDialog("open"); break;
-      case "save": if (s.activePath) s.saveFile(s.activePath); break;
-      case "saveAll": s.saveAll(); break;
+      case "save": if (s.activePath) void s.saveFile(s.activePath); break;
+      case "saveAll": void s.saveAll(); break;
       case "closeProject": s.closeProject(); break;
-      case "build": s.runBuild(); break;
-      case "run": void (async () => { await s.runBuild(); })(); break;
-      case "preview": s.runPreview(); break;
+      case "undo": editorUndo(); break;
+      case "redo": editorRedo(); break;
+      case "themeDark": s.setTheme("dark"); break;
+      case "themeLight": s.setTheme("light"); break;
+      case "togglePanel": s.setBottomVisible(!s.bottomVisible); break;
+      case "togglePreview": s.setRightOpen(!s.rightOpen); break;
+      case "build": void s.runBuild(); break;
+      case "run": void s.runBuild(); break;
+      case "preview": void s.runPreview(); break;
       case "about": s.showToast(t("about.text")); break;
     }
   };
 
   const activeFile = s.openFiles.find((f) => f.path === s.activePath);
+  const title = activeFile ? `${activeFile.name} — ${s.project?.name ?? ""}` : t("app.title");
 
-  return (
-    <div className="flex flex-col bg-darcula-bg border-b border-black/40 select-none">
-      {/* Custom window frame: always mounted, also on the welcome screen. */}
-      <TitleBar
-        title={activeFile ? `${activeFile.name} — ${s.project?.name ?? ""}` : t("app.title")}
-      />
+  const isChecked = (item: MenuItem) => {
+    if (item.action === "themeDark") return s.theme === "dark";
+    if (item.action === "themeLight") return s.theme === "light";
+    if (item.action === "togglePanel") return s.bottomVisible;
+    if (item.action === "togglePreview") return s.rightOpen;
+    return false;
+  };
 
-      {/* Menu bar */}
-      <div className="no-drag flex items-center h-7 px-2 text-2xs relative z-30">
-        {MENUS.map(({ id: m, key: mKey, items }) => (
-          <div key={m} className="relative" onMouseEnter={() => openMenu && setOpenMenu(m)}>
-            <button
-              className={`px-2.5 py-1 rounded ${openMenu === m ? "bg-darcula-hover text-white" : "hover:bg-white/5"}`}
-              onClick={() => setOpenMenu(openMenu === m ? null : m)}
-            >
-              {t(mKey)}
-            </button>
-            {openMenu === m && (
-              <div className="absolute top-full left-0 mt-0.5 min-w-[220px] bg-darcula-panel border border-black/50 rounded-sm shadow-2xl py-1 text-darcula-text">
-                {items.map((item, i) =>
-                  item.sep ? (
-                    <div key={i} className="h-px bg-white/10 my-1" />
-                  ) : (
-                    <button
-                      key={i}
-                      onClick={() => runAction(item.action)}
-                      className="w-full flex items-center gap-2 px-3 py-1.5 hover:bg-darcula-hover hover:text-white text-left disabled:opacity-40"
-                      disabled={!item.action}
-                    >
-                      {item.icon && <item.icon size={13} className="text-darcula-dim" />}
-                      <span className="flex-1">{item.key ? t(item.key) : ""}</span>
-                    </button>
-                  ),
-                )}
-              </div>
-            )}
-          </div>
-        ))}
-        <div className="flex-1" />
-        <div className="flex items-center gap-1 text-darcula-dim">
-          <Settings size={13} className="hover:text-white cursor-pointer" />
+  const layoutActions = (
+    <>
+      <button
+        onClick={() => s.setBottomVisible(!s.bottomVisible)}
+        title={t("common.panel")}
+        aria-label={t("common.panel")}
+        className={`grid h-7 w-7 place-items-center rounded-sm hover:bg-ide-hover hover:text-ide-text ${
+          s.bottomVisible ? "text-ide-text" : "text-ide-dim"
+        }`}
+      >
+        <PanelBottom size={14} />
+      </button>
+      <button
+        onClick={() => s.setRightOpen(!s.rightOpen)}
+        title={t("bottom.tab.preview")}
+        aria-label={t("bottom.tab.preview")}
+        className={`grid h-7 w-7 place-items-center rounded-sm hover:bg-ide-hover hover:text-ide-text ${
+          s.rightOpen ? "text-ide-text" : "text-ide-dim"
+        }`}
+      >
+        <PanelRight size={14} />
+      </button>
+      <div className="mx-1 h-4 w-px bg-ide-border" />
+    </>
+  );
+
+  const menuBar = (
+    <div ref={rootRef} className="relative flex h-full items-center">
+      {MENUS.map(({ id, key, items }) => (
+        <div key={id} className="relative h-full" onMouseEnter={() => openMenu && setOpenMenu(id)}>
+          <button
+            onClick={() => setOpenMenu(openMenu === id ? null : id)}
+            className={`h-full rounded-sm px-2.5 text-2xs text-ide-text hover:bg-ide-hover ${
+              openMenu === id ? "bg-ide-hover" : ""
+            }`}
+          >
+            {t(key)}
+          </button>
+          {openMenu === id && (
+            <div className="absolute left-0 top-full z-50 min-w-[240px] rounded-sm border border-ide-border bg-ide-menu py-1 text-2xs text-ide-text shadow-xl">
+              {items.map((item, i) =>
+                item.sep ? (
+                  <div key={i} className="my-1 h-px bg-ide-border" />
+                ) : (
+                  <button
+                    key={i}
+                    onClick={() => runAction(item.action)}
+                    disabled={!item.action}
+                    className="flex h-7 w-full items-center gap-2 px-3 text-left hover:bg-ide-accent hover:text-white disabled:opacity-40 disabled:hover:bg-transparent disabled:hover:text-ide-text"
+                  >
+                    <span className="grid w-4 shrink-0 place-items-center text-ide-dim">
+                      {isChecked(item) ? <Check size={13} /> : item.icon ? <item.icon size={13} /> : null}
+                    </span>
+                    <span className="flex-1 truncate">{item.key ? t(item.key) : ""}</span>
+                    {item.shortcut && <span className="ml-6 text-ide-dim">{item.shortcut}</span>}
+                  </button>
+                ),
+              )}
+            </div>
+          )}
         </div>
-      </div>
-
-      {/* Toolbar */}
-      <div className="no-drag flex items-center h-9 px-3 gap-1 border-t border-black/30 text-darcula-text">
-        <button className="p-1.5 rounded hover:bg-white/5 text-darcula-dim" title="Back"><ChevronDown size={15} className="-rotate-90" /></button>
-        <button className="p-1.5 rounded hover:bg-white/5 text-darcula-dim" title="Forward"><ChevronDown size={15} className="rotate-90" /></button>
-        <div className="w-px h-5 bg-white/10 mx-1" />
-        <button
-          onClick={() => void s.runBuild()}
-          disabled={!s.project || s.buildRunning}
-          className="flex items-center gap-1.5 px-2.5 py-1 rounded bg-darcula-green/90 hover:bg-darcula-green text-white text-xs font-medium disabled:opacity-40"
-          title={t("toolbar.run")}
-        >
-          <Play size={13} fill="currentColor" />
-          <span>Run</span>
-          <ChevronDown size={12} />
-        </button>
-        <button className="p-1.5 rounded hover:bg-white/5 text-darcula-green" title={t("toolbar.debug")}><Bug size={15} /></button>
-        <button
-          onClick={() => s.runBuild()}
-          disabled={!s.project || s.buildRunning}
-          className="p-1.5 rounded hover:bg-white/5 disabled:opacity-40"
-          title={t("toolbar.buildZip")}
-        >
-          <Hammer size={15} />
-        </button>
-        <div className="w-px h-5 bg-white/10 mx-1" />
-        <button className="flex items-center gap-1.5 px-2 py-1 rounded hover:bg-white/5 text-2xs border border-white/10">
-          <Smartphone size={13} className="text-darcula-accent" />
-          <span>{t("toolbar.preview")}</span>
-          <span className="text-darcula-dim">390 × 844</span>
-          <ChevronDown size={12} className="text-darcula-dim" />
-        </button>
-        <button className="flex items-center gap-1.5 px-2 py-1 rounded hover:bg-white/5 text-2xs border border-white/10">
-          <span className="text-darcula-accent">SDK</span>
-          <span>{t("toolbar.sdk")}</span>
-          <ChevronDown size={12} className="text-darcula-dim" />
-        </button>
-        <div className="flex-1" />
-        <div className="flex items-center gap-2 px-2.5 py-1 rounded bg-darcula-editor border border-white/5 text-darcula-dim text-2xs w-64">
-          <Search size={12} />
-          <span className="flex-1">{t("toolbar.searchEverywhere")}</span>
-          <kbd className="px-1 rounded bg-white/10 text-[0.625rem]">⇧⇧</kbd>
-        </div>
-        <div className="w-7 h-7 rounded-full bg-gradient-to-br from-emerald-400 to-teal-600 grid place-items-center text-white text-xs font-bold ml-1">Q</div>
-      </div>
+      ))}
     </div>
   );
+
+  return <TitleBar title={title} menus={menuBar} actions={s.project ? layoutActions : undefined} />;
 }

@@ -109,12 +109,12 @@ export function ContextMenuProvider({ children }: { children: ReactNode }) {
           />
           <div
             ref={menuRef}
-            className="fixed z-[80] min-w-[190px] max-h-[70vh] overflow-auto bg-darcula-panel border border-black/60 rounded-sm shadow-2xl py-1 text-2xs text-darcula-text"
+            className="fixed z-[80] min-w-[190px] max-h-[70vh] overflow-auto rounded-sm border border-ide-border bg-ide-menu py-1 text-2xs text-ide-text shadow-xl"
             style={{ left: menu.x, top: menu.y }}
           >
             {menu.items.map((item, i) =>
               "separator" in item ? (
-                <div key={i} className="h-px bg-white/10 my-1" />
+                <div key={i} className="my-1 h-px bg-ide-border" />
               ) : (
                 <button
                   key={i}
@@ -123,15 +123,15 @@ export function ContextMenuProvider({ children }: { children: ReactNode }) {
                     setMenu(null);
                     item.action();
                   }}
-                  className={`w-full flex items-center gap-2 px-3 py-1.5 text-left disabled:opacity-40 ${
+                  className={`flex h-7 w-full items-center gap-2 px-3 text-left disabled:opacity-40 ${
                     item.danger
-                      ? "text-red-400 hover:bg-red-500/80 hover:text-white"
-                      : "hover:bg-darcula-hover hover:text-white"
+                      ? "text-ide-red hover:bg-[#e81123] hover:text-white"
+                      : "hover:bg-ide-accent hover:text-white"
                   }`}
                 >
-                  {item.icon && <span className="text-darcula-dim">{item.icon}</span>}
+                  {item.icon && <span className="grid w-4 shrink-0 place-items-center text-ide-dim">{item.icon}</span>}
                   <span className="flex-1 truncate">{item.label}</span>
-                  {item.shortcut && <span className="text-darcula-dim/70 ml-4">{item.shortcut}</span>}
+                  {item.shortcut && <span className="ml-4 text-ide-dim">{item.shortcut}</span>}
                 </button>
               ),
             )}

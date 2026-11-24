@@ -16,6 +16,10 @@ export const LANGS = [
 export type Lang = (typeof LANGS)[number]["id"];
 
 const vi = {
+  "common.panel": "Bảng điều khiển",
+  "common.theme": "Chủ đề",
+  "common.themeDark": "Chủ đề tối",
+  "common.themeLight": "Chủ đề sáng",
   "app.title": "QChat Mini App Studio",
 
   "common.cancel": "Hủy",
@@ -198,6 +202,10 @@ const vi = {
 export type I18nKey = keyof typeof vi;
 
 const en: Record<I18nKey, string> = {
+  "common.panel": "Panel",
+  "common.theme": "Theme",
+  "common.themeDark": "Dark Theme",
+  "common.themeLight": "Light Theme",
   "app.title": "QChat Mini App Studio",
 
   "common.cancel": "Cancel",
@@ -378,6 +386,10 @@ const en: Record<I18nKey, string> = {
 };
 
 const zh: Record<I18nKey, string> = {
+  "common.panel": "面板",
+  "common.theme": "主题",
+  "common.themeDark": "深色主题",
+  "common.themeLight": "浅色主题",
   "app.title": "QChat Mini App Studio",
 
   "common.cancel": "取消",

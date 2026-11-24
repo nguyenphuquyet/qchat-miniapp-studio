@@ -10,7 +10,7 @@ const TABS: { id: RightTab; labelKey: I18nKey; icon: any }[] = [
   { id: "preview", labelKey: "bottom.tab.preview", icon: Smartphone },
 ];
 
-/** Right-hand tool window: Manifest + Preview tabs. */
+/** Secondary side bar: Manifest + Preview tabs. */
 export default function RightPanel({ onClose }: { onClose: () => void }) {
   const s = useStudio();
   const { t } = useI18n();
@@ -21,28 +21,28 @@ export default function RightPanel({ onClose }: { onClose: () => void }) {
   };
 
   return (
-    <div className="h-full flex flex-col bg-darcula-editor border-l border-black/40">
-      <div className="flex items-center h-7 px-1 border-b border-black/40 shrink-0">
+    <div className="flex h-full flex-col border-l border-ide-border bg-ide-sidebar">
+      <div className="flex h-9 shrink-0 items-center border-b border-ide-border px-1">
         {TABS.map((tab) => (
           <button
             key={tab.id}
             onClick={() => select(tab.id)}
-            className={`flex items-center gap-1.5 px-3 h-7 text-2xs border-b-2 ${
+            className={`flex h-full items-center gap-1.5 border-b-2 px-3 text-2xs uppercase tracking-wide ${
               s.rightTab === tab.id
-                ? "text-white border-darcula-modified"
-                : "text-darcula-dim border-transparent hover:text-darcula-text"
+                ? "border-ide-accent text-ide-text"
+                : "border-transparent text-ide-dim hover:text-ide-text"
             }`}
           >
-            <tab.icon size={12} />
+            <tab.icon size={13} />
             {t(tab.labelKey)}
           </button>
         ))}
         <div className="flex-1" />
-        <button className="p-1 hover:bg-white/10 rounded" onClick={onClose} title={t("common.hide")}>
-          <X size={12} className="text-darcula-dim" />
+        <button className="grid h-6 w-6 place-items-center rounded-sm hover:bg-ide-hover" onClick={onClose} title={t("common.hide")}>
+          <X size={14} className="text-ide-dim" />
         </button>
       </div>
-      <div className="flex-1 min-h-0">
+      <div className="min-h-0 flex-1">
         {s.rightTab === "manifest" ? <ManifestPanel /> : <PreviewPanel />}
       </div>
     </div>

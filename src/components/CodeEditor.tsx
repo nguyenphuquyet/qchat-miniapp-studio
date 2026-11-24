@@ -11,59 +11,72 @@ import { autocompletion, closeBrackets, closeBracketsKeymap, completionKeymap } 
 import { searchKeymap, highlightSelectionMatches } from "@codemirror/search";
 import { tags as t } from "@lezer/highlight";
 import { setActiveEditor, getActiveEditor } from "../lib/editorBridge";
+import type { Theme } from "../lib/theme";
 
-const darculaHighlight = HighlightStyle.define([
-  { tag: t.keyword, color: "#CC7832" },
-  { tag: [t.controlKeyword, t.moduleKeyword], color: "#CC7832" },
-  { tag: [t.string, t.special(t.string), t.attributeValue], color: "#6A8759" },
-  { tag: [t.number, t.bool, t.null], color: "#6897BB" },
-  { tag: t.comment, color: "#7F7F7F", fontStyle: "italic" },
-  { tag: [t.function(t.variableName), t.function(t.propertyName)], color: "#FFC66D" },
-  { tag: t.definition(t.variableName), color: "#A9B7C6" },
-  { tag: [t.typeName, t.className, t.definition(t.typeName)], color: "#A9B7C6" },
-  { tag: [t.propertyName, t.attributeName], color: "#A9B7C6" },
-  { tag: [t.variableName], color: "#A9B7C6" },
-  { tag: [t.operator, t.punctuation], color: "#A9B7C6" },
-  { tag: [t.self, t.namespace], color: "#9876AA" },
-  { tag: t.meta, color: "#BBB529" },
-  { tag: t.tagName, color: "#E8BF6A" },
-  { tag: t.atom, color: "#9876AA" },
+/*
+ * VS Code syntax colors. The actual values live in index.css as `--cm-*`
+ * variables, so the editor follows the app theme without rebuilding the state.
+ */
+const vsCodeHighlight = HighlightStyle.define([
+  { tag: [t.keyword, t.modifier, t.operatorKeyword], color: "var(--cm-keyword)" },
+  { tag: [t.controlKeyword, t.moduleKeyword], color: "var(--cm-control)" },
+  { tag: [t.string, t.special(t.string), t.attributeValue], color: "var(--cm-string)" },
+  { tag: [t.number, t.bool, t.null], color: "var(--cm-number)" },
+  { tag: [t.comment, t.blockComment, t.lineComment, t.docComment], color: "var(--cm-comment)", fontStyle: "italic" },
+  { tag: [t.function(t.variableName), t.function(t.propertyName)], color: "var(--cm-function)" },
+  { tag: [t.definition(t.variableName), t.definition(t.propertyName)], color: "var(--cm-variable)" },
+  { tag: [t.typeName, t.className, t.namespace], color: "var(--cm-type)" },
+  { tag: [t.propertyName, t.attributeName], color: "var(--cm-property)" },
+  { tag: t.variableName, color: "var(--cm-variable)" },
+  { tag: [t.operator, t.punctuation], color: "var(--cm-fg)" },
+  { tag: [t.self, t.atom], color: "var(--cm-control)" },
+  { tag: t.meta, color: "var(--cm-meta)" },
+  { tag: t.tagName, color: "var(--cm-tag)" },
   { tag: t.emphasis, fontStyle: "italic" },
   { tag: t.strong, fontWeight: "bold" },
-  { tag: t.link, color: "#6A8759", textDecoration: "underline" },
-  { tag: t.invalid, color: "#BC3F3C" },
+  { tag: t.link, color: "var(--cm-link)", textDecoration: "underline" },
+  { tag: t.invalid, color: "var(--cm-invalid)" },
 ]);
 
-const darculaTheme = EditorView.theme(
-  {
-    "&": { backgroundColor: "#2B2B2B", color: "#A9B7C6", height: "100%" },
-    ".cm-content": { caretColor: "#ffffff", padding: "8px 0" },
-    ".cm-cursor, .cm-dropCursor": { borderLeftColor: "#ffffff" },
-    "&.cm-focused .cm-selectionBackground, .cm-selectionBackground, .cm-content ::selection": {
-      backgroundColor: "#214283 !important",
+const editorTheme = (dark: boolean) =>
+  EditorView.theme(
+    {
+      "&": { backgroundColor: "var(--cm-bg)", color: "var(--cm-fg)", height: "100%" },
+      ".cm-content": { caretColor: "var(--cm-cursor)", padding: "6px 0" },
+      ".cm-line": { padding: "0 8px" },
+      ".cm-cursor, .cm-dropCursor": { borderLeftColor: "var(--cm-cursor)" },
+      "&.cm-focused .cm-selectionBackground, .cm-selectionBackground, .cm-content ::selection": {
+        backgroundColor: "var(--cm-selection) !important",
+      },
+      ".cm-selectionMatch": { backgroundColor: "var(--cm-selection-match)" },
+      ".cm-activeLine": { backgroundColor: "var(--cm-active-line)" },
+      ".cm-gutters": {
+        backgroundColor: "var(--cm-gutter-bg)",
+        color: "var(--cm-gutter-fg)",
+        border: "none",
+        borderRight: "1px solid rgb(var(--ide-border))",
+        fontFamily: '"JetBrains Mono", monospace',
+      },
+      ".cm-activeLineGutter": { backgroundColor: "var(--cm-active-gutter)", color: "var(--cm-active-gutter-fg)" },
+      ".cm-foldPlaceholder": { backgroundColor: "transparent", border: "none", color: "var(--cm-gutter-fg)" },
+      ".cm-tooltip": {
+        backgroundColor: "var(--cm-tooltip-bg)",
+        border: "1px solid var(--cm-tooltip-border)",
+        color: "rgb(var(--ide-text))",
+      },
+      ".cm-tooltip.cm-tooltip-autocomplete > ul > li[aria-selected]": {
+        backgroundColor: "rgb(var(--ide-select))",
+        color: "#ffffff",
+      },
+      ".cm-matchingBracket": { backgroundColor: "var(--cm-bracket)", outline: "1px solid var(--cm-bracket-border)" },
+      ".cm-panels": { backgroundColor: "rgb(var(--ide-panel))", color: "rgb(var(--ide-text))" },
+      ".cm-panels.cm-panels-top": { borderBottom: "1px solid rgb(var(--ide-border))" },
+      ".cm-panels.cm-panels-bottom": { borderTop: "1px solid rgb(var(--ide-border))" },
+      ".cm-searchMatch": { backgroundColor: "var(--cm-search-match)" },
+      ".cm-searchMatch-selected": { backgroundColor: "var(--cm-search-match-selected)" },
     },
-    ".cm-selectionMatch": { backgroundColor: "#21428355" },
-    ".cm-activeLine": { backgroundColor: "#323232" },
-    ".cm-gutters": {
-      backgroundColor: "#313335",
-      color: "#606366",
-      border: "none",
-      borderRight: "1px solid #323232",
-      fontFamily: '"JetBrains Mono", monospace',
-    },
-    ".cm-activeLineGutter": { backgroundColor: "#323232", color: "#A4A3A3" },
-    ".cm-foldPlaceholder": { backgroundColor: "transparent", border: "none", color: "#ddd" },
-    ".cm-tooltip": { backgroundColor: "#3C3F41", border: "1px solid #4B4F52", color: "#BBBBBB" },
-    ".cm-tooltip.cm-tooltip-autocomplete > ul > li[aria-selected]": { backgroundColor: "#214283", color: "#fff" },
-    ".cm-matchingBracket": { backgroundColor: "#3a5a3a", outline: "1px solid #59A869" },
-    ".cm-panels": { backgroundColor: "#3C3F41", color: "#BBBBBB" },
-    ".cm-panels.cm-panels-top": { borderBottom: "1px solid #323232" },
-    ".cm-panels.cm-panels-bottom": { borderTop: "1px solid #323232" },
-    ".cm-searchMatch": { backgroundColor: "#416730", outline: "1px solid #59A869" },
-    ".cm-searchMatch-selected": { backgroundColor: "#59A869" },
-  },
-  { dark: true },
-);
+    { dark },
+  );
 
 function languageFor(lang: string): Extension {
   switch (lang) {
@@ -87,12 +100,13 @@ function languageFor(lang: string): Extension {
 type Props = {
   content: string;
   language: string;
+  theme: Theme;
   onChange: (v: string) => void;
   onCursor: (line: number, col: number) => void;
   onSave: () => void;
 };
 
-export default function CodeEditor({ content, language, onChange, onCursor, onSave }: Props) {
+export default function CodeEditor({ content, language, theme, onChange, onCursor, onSave }: Props) {
   const hostRef = useRef<HTMLDivElement>(null);
   const viewRef = useRef<EditorView | null>(null);
   const onChangeRef = useRef(onChange);
@@ -145,8 +159,8 @@ export default function CodeEditor({ content, language, onChange, onCursor, onSa
           indentWithTab,
         ]),
         saveKeymap,
-        syntaxHighlighting(darculaHighlight, { fallback: false }),
-        darculaTheme,
+        syntaxHighlighting(vsCodeHighlight, { fallback: false }),
+        editorTheme(theme === "dark"),
         languageFor(language),
         updateListener,
         EditorView.lineWrapping,
@@ -155,8 +169,6 @@ export default function CodeEditor({ content, language, onChange, onCursor, onSa
     const view = new EditorView({ state, parent: hostRef.current });
     viewRef.current = view;
     setActiveEditor(view);
-    // initial cursor
-    const line = view.state.doc.lineAt(0);
     onCursorRef.current(1, 1);
     return () => {
       if (getActiveEditor() === view) setActiveEditor(null);
@@ -164,7 +176,7 @@ export default function CodeEditor({ content, language, onChange, onCursor, onSa
       viewRef.current = null;
     };
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [language]);
+  }, [language, theme]);
 
   return <div ref={hostRef} className="h-full w-full overflow-hidden" />;
 }

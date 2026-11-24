@@ -56,79 +56,84 @@ export default function NewProjectDialog() {
   };
 
   return (
-    <div className="fixed inset-0 z-50 bg-black/60 grid place-items-center" onClick={() => s.setDialog(null)}>
+    <div className="fixed inset-0 z-50 grid place-items-center bg-black/50" onClick={() => s.setDialog(null)}>
       <div
-        className="w-[560px] max-h-[90vh] overflow-auto bg-darcula-panel border border-black/60 rounded-lg shadow-2xl"
+        className="max-h-[90vh] w-[560px] overflow-auto rounded-md border border-ide-border bg-ide-widget shadow-2xl"
         onClick={(e) => e.stopPropagation()}
       >
-        <div className="flex items-center h-11 px-4 border-b border-black/40">
-          <span className="text-sm text-white font-medium">{t("newProject.title")}</span>
+        <div className="flex h-11 items-center border-b border-ide-border px-4">
+          <span className="text-sm font-medium text-ide-text">{t("newProject.title")}</span>
           <div className="flex-1" />
-          <button className="p-1 hover:bg-white/10 rounded" onClick={() => s.setDialog(null)}><X size={15} /></button>
+          <button className="grid h-6 w-6 place-items-center rounded-sm hover:bg-ide-hover" onClick={() => s.setDialog(null)}>
+            <X size={15} />
+          </button>
         </div>
 
-        <div className="p-5 space-y-4 text-xs">
+        <div className="space-y-4 p-5 text-xs">
           <Field label={t("newProject.appName")}>
-            <input className="inp" value={name} onChange={(e) => setName(e.target.value)} />
+            <input className="ide-input" value={name} onChange={(e) => setName(e.target.value)} />
           </Field>
           <Field label={t("newProject.appId")}>
             <div className="flex gap-2">
-              <input className="inp flex-1 font-mono" value={appId} onChange={(e) => setAppId(e.target.value)} />
-              <button className="btn" title={t("newProject.regenerate")} onClick={() => setAppId(generateAppId())}><RefreshCw size={13} /></button>
+              <input className="ide-input flex-1 font-mono" value={appId} onChange={(e) => setAppId(e.target.value)} />
+              <button className="ide-btn px-2.5" title={t("newProject.regenerate")} onClick={() => setAppId(generateAppId())}>
+                <RefreshCw size={13} />
+              </button>
             </div>
           </Field>
           <Field label={t("newProject.description")}>
-            <input className="inp" value={description} onChange={(e) => setDescription(e.target.value)} />
+            <input className="ide-input" value={description} onChange={(e) => setDescription(e.target.value)} />
           </Field>
           <div className="grid grid-cols-2 gap-4">
             <Field label={t("newProject.version")}>
-              <input className="inp" value={version} onChange={(e) => setVersion(e.target.value)} />
+              <input className="ide-input" value={version} onChange={(e) => setVersion(e.target.value)} />
             </Field>
             <Field label={t("newProject.location")}>
               <div className="flex gap-2">
-                <input className="inp flex-1 text-2xs" value={location} placeholder={t("newProject.locationPlaceholder")} onChange={(e) => setLocation(e.target.value)} />
-                <button className="btn" onClick={async () => { const d = await api.pickDirectory(location || defaultDir); if (d) setLocation(d); }}><FolderOpen size={13} /></button>
+                <input className="ide-input flex-1 text-2xs" value={location} placeholder={t("newProject.locationPlaceholder")} onChange={(e) => setLocation(e.target.value)} />
+                <button className="ide-btn px-2.5" onClick={async () => { const d = await api.pickDirectory(location || defaultDir); if (d) setLocation(d); }}>
+                  <FolderOpen size={13} />
+                </button>
               </div>
             </Field>
           </div>
 
           <div>
-            <div className="text-2xs text-darcula-dim mb-1">{t("newProject.pathPreview")}</div>
-            <div className="font-mono text-2xs text-darcula-text bg-darcula-editor border border-white/5 rounded px-2 py-1.5 break-all">
+            <div className="mb-1 text-2xs text-ide-dim">{t("newProject.pathPreview")}</div>
+            <div className="break-all rounded-sm border border-ide-border bg-ide-input px-2 py-1.5 font-mono text-2xs text-ide-text">
               {projectPathPreview(location, name) || "—"}
             </div>
-            <div className="text-2xs text-darcula-dim mt-1">{t("newProject.locationHint")}</div>
+            <div className="mt-1 text-2xs text-ide-dim">{t("newProject.locationHint")}</div>
           </div>
 
           <div>
-            <div className="text-darcula-text mb-2">{t("newProject.permissions")}</div>
+            <div className="mb-2 text-ide-text">{t("newProject.permissions")}</div>
             <div className="grid grid-cols-2 gap-1.5">
               {ALL_PERMISSIONS.map((p) => (
-                <label key={p.id} className="flex items-start gap-2 p-2 rounded bg-darcula-editor border border-white/5 cursor-pointer hover:border-white/20">
+                <label key={p.id} className="flex cursor-pointer items-start gap-2 rounded-sm border border-ide-border bg-ide-editor p-2 hover:border-ide-accent">
                   <input
                     type="checkbox"
                     checked={permissions.includes(p.id)}
                     onChange={() => toggle(p.id)}
-                    className="mt-0.5 accent-emerald-500"
+                    className="mt-0.5"
                   />
                   <div>
-                    <div className="text-2xs text-white font-mono">{p.label}</div>
-                    <div className="text-2xs text-darcula-dim">{p.desc}</div>
+                    <div className="font-mono text-2xs text-ide-text">{p.label}</div>
+                    <div className="text-2xs text-ide-dim">{p.desc}</div>
                   </div>
                 </label>
               ))}
             </div>
           </div>
 
-          {error && <div className="text-darcula-red text-2xs">{error}</div>}
+          {error && <div className="text-2xs text-ide-red">{error}</div>}
         </div>
 
-        <div className="flex items-center justify-end gap-2 px-5 py-3 border-t border-black/40 bg-darcula-bg">
-          <button className="px-4 py-1.5 rounded text-2xs text-darcula-text hover:bg-white/5" onClick={() => s.setDialog(null)}>{t("common.cancel")}</button>
-          <button className="px-4 py-1.5 rounded bg-darcula-green hover:bg-emerald-600 text-white text-2xs font-medium" onClick={create}>{t("common.create")}</button>
+        <div className="flex items-center justify-end gap-2 border-t border-ide-border bg-ide-sidebar px-5 py-3">
+          <button className="ide-btn" onClick={() => s.setDialog(null)}>{t("common.cancel")}</button>
+          <button className="ide-btn ide-btn-primary" onClick={create}>{t("common.create")}</button>
         </div>
       </div>
-      <style>{`.inp{width:100%;background:#2b2b2b;border:1px solid #4b4f52;border-radius:4px;padding:6px 10px;color:#e8eef7;font-size:0.75rem;outline:none}.inp:focus{border-color:#4e94ce}.btn{display:inline-flex;align-items:center;justify-content:center;padding:6px 10px;background:#3c3f41;border:1px solid #4b4f52;border-radius:4px;color:#bbbbbb;cursor:pointer}.btn:hover{background:#4b4f52}`}</style>
     </div>
   );
 }
@@ -136,7 +141,7 @@ export default function NewProjectDialog() {
 function Field({ label, children }: { label: string; children: React.ReactNode }) {
   return (
     <div>
-      <div className="text-2xs text-darcula-dim mb-1">{label}</div>
+      <div className="mb-1 text-2xs text-ide-dim">{label}</div>
       {children}
     </div>
   );

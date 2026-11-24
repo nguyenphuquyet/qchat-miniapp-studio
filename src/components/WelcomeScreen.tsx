@@ -29,74 +29,76 @@ export default function WelcomeScreen() {
   }, [s.dialog]);
 
   return (
-    <div className="h-full flex bg-darcula-bg">
+    <div className="flex h-full bg-ide-editor">
       {/* Left nav */}
-      <div className="w-56 bg-[#333537] border-r border-black/40 py-6 flex flex-col">
-        <div className="px-5 mb-8">
-          <div className="text-white font-semibold text-sm">{t("app.title")}</div>
-          <div className="text-2xs text-darcula-dim mt-0.5">{t("welcome.version")}</div>
+      <div className="flex w-56 flex-col border-r border-ide-border bg-ide-sidebar py-5">
+        <div className="mb-7 px-5">
+          <div className="text-sm font-semibold text-ide-text">{t("app.title")}</div>
+          <div className="mt-0.5 text-2xs text-ide-dim">{t("welcome.version")}</div>
         </div>
         {NAV.map((n, i) => (
           <button
             key={n.id}
-            className={`flex items-center gap-3 px-5 py-2.5 text-xs ${i === 0 ? "bg-white/10 text-white border-l-2 border-darcula-accent" : "text-darcula-dim hover:bg-white/5 border-l-2 border-transparent"}`}
+            className={`flex items-center gap-3 border-l-2 px-5 py-2.5 text-xs ${
+              i === 0
+                ? "border-ide-accent bg-ide-select-inactive text-ide-text"
+                : "border-transparent text-ide-dim hover:bg-ide-hover hover:text-ide-text"
+            }`}
           >
-            <n.icon size={15} />
+            <n.icon size={16} />
             {t(n.key)}
           </button>
         ))}
         <div className="flex-1" />
-        <div className="px-5 text-2xs text-darcula-dim/70">
-          {t("welcome.footer")}
-        </div>
+        <div className="px-5 text-2xs text-ide-dim">{t("welcome.footer")}</div>
       </div>
 
       {/* Main */}
-      <div className="flex-1 flex flex-col p-8 overflow-auto">
-        <div className="flex items-center gap-2 mb-6">
+      <div className="flex flex-1 flex-col overflow-auto p-8">
+        <div className="mb-6 flex items-center gap-2">
           <button
             onClick={() => s.setDialog("new")}
-            className="flex items-center gap-2 px-4 py-2 rounded bg-darcula-green hover:bg-emerald-600 text-white text-xs font-medium"
+            className="ide-btn ide-btn-primary px-4 py-2"
           >
             <FilePlus2 size={14} /> {t("welcome.newProject")}
           </button>
           <button
             onClick={() => s.setDialog("open")}
-            className="flex items-center gap-2 px-4 py-2 rounded bg-white/10 hover:bg-white/15 text-white text-xs"
+            className="ide-btn px-4 py-2"
           >
             <FolderOpen size={14} /> {t("welcome.open")}
           </button>
           <div className="flex-1" />
-          <div className="text-2xs text-darcula-dim flex items-center gap-1">
+          <div className="flex items-center gap-1 text-2xs text-ide-dim">
             <Clock size={11} /> {t("welcome.recent")}
           </div>
         </div>
 
-        <div className="bg-darcula-editor rounded-lg border border-black/30 overflow-hidden">
+        <div className="overflow-hidden rounded-sm border border-ide-border bg-ide-editor">
           {s.recent.length === 0 ? (
-            <div className="p-10 text-center text-darcula-dim text-xs">
+            <div className="p-10 text-center text-xs text-ide-dim">
               {t("welcome.noRecent")}
             </div>
           ) : (
             s.recent.map((r) => (
               <div
                 key={r.path}
-                className="flex items-center gap-3 px-4 py-3 hover:bg-white/5 cursor-pointer border-b border-white/5 last:border-0 group"
+                className="group flex cursor-pointer items-center gap-3 border-b border-ide-border px-4 py-3 last:border-0 hover:bg-ide-hover"
                 onClick={() => s.doOpenProject(r.path)}
               >
-                <FolderGit2 size={16} className="text-darcula-accent shrink-0" />
-                <div className="flex-1 min-w-0">
-                  <div className="text-xs text-white truncate">{r.name}</div>
-                  <div className="text-2xs text-darcula-dim truncate">{r.path}</div>
+                <FolderGit2 size={16} className="shrink-0 text-ide-blue" />
+                <div className="min-w-0 flex-1">
+                  <div className="truncate text-xs text-ide-text">{r.name}</div>
+                  <div className="truncate text-2xs text-ide-dim">{r.path}</div>
                 </div>
                 <button
-                  className="opacity-0 group-hover:opacity-100 p-1 hover:bg-white/10 rounded text-darcula-dim"
+                  className="rounded-sm p-1 text-ide-dim opacity-0 hover:bg-ide-select-inactive group-hover:opacity-100"
                   onClick={(e) => { e.stopPropagation(); s.removeRecent(r.path); s.loadRecent(); }}
                   title={t("welcome.removeRecent")}
                 >
                   <Trash2 size={12} />
                 </button>
-                <ChevronRight size={14} className="text-darcula-dim" />
+                <ChevronRight size={14} className="text-ide-dim" />
               </div>
             ))
           )}
@@ -108,9 +110,9 @@ export default function WelcomeScreen() {
             { title: t("welcome.card2.title"), desc: t("welcome.card2.desc") },
             { title: t("welcome.card3.title"), desc: t("welcome.card3.desc") },
           ].map((c) => (
-            <div key={c.title} className="p-4 rounded-lg bg-white/5 border border-white/5">
-              <div className="text-xs text-white font-medium mb-1">{c.title}</div>
-              <div className="text-2xs text-darcula-dim leading-relaxed">{c.desc}</div>
+            <div key={c.title} className="rounded-sm border border-ide-border bg-ide-hover/40 p-4">
+              <div className="mb-1 text-xs font-medium text-ide-text">{c.title}</div>
+              <div className="text-2xs leading-relaxed text-ide-dim">{c.desc}</div>
             </div>
           ))}
         </div>

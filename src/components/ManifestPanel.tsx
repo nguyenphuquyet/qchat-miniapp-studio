@@ -32,31 +32,31 @@ export default function ManifestPanel() {
     description !== p.description || JSON.stringify(permissions) !== JSON.stringify(p.permissions);
 
   return (
-    <div className="h-full flex flex-col bg-darcula-editor">
-      <div className="flex-1 overflow-auto p-3 space-y-3 text-2xs">
+    <div className="flex h-full flex-col bg-ide-sidebar">
+      <div className="flex-1 space-y-3 overflow-auto p-3 text-2xs">
         <div>
-          <div className="text-darcula-dim mb-1">{t("manifest.appName")}</div>
-          <input className="w-full bg-darcula-panel border border-white/10 rounded px-2 py-1.5 text-darcula-text outline-none focus:border-darcula-accent" value={name} onChange={(e) => setName(e.target.value)} />
+          <div className="mb-1 text-ide-dim">{t("manifest.appName")}</div>
+          <input className="ide-input" value={name} onChange={(e) => setName(e.target.value)} />
         </div>
         <div>
-          <div className="text-darcula-dim mb-1">{t("manifest.appId")}</div>
-          <input className="w-full bg-darcula-panel border border-white/10 rounded px-2 py-1.5 font-mono text-darcula-accent outline-none focus:border-darcula-accent" value={appId} onChange={(e) => setAppId(e.target.value)} />
+          <div className="mb-1 text-ide-dim">{t("manifest.appId")}</div>
+          <input className="ide-input font-mono text-ide-blue" value={appId} onChange={(e) => setAppId(e.target.value)} />
         </div>
         <div>
-          <div className="text-darcula-dim mb-1">{t("manifest.version")}</div>
-          <input className="w-full bg-darcula-panel border border-white/10 rounded px-2 py-1.5 font-mono text-darcula-text outline-none focus:border-darcula-accent" value={version} onChange={(e) => setVersion(e.target.value)} />
+          <div className="mb-1 text-ide-dim">{t("manifest.version")}</div>
+          <input className="ide-input font-mono" value={version} onChange={(e) => setVersion(e.target.value)} />
         </div>
         <div>
-          <div className="text-darcula-dim mb-1">{t("manifest.description")}</div>
-          <textarea className="w-full bg-darcula-panel border border-white/10 rounded px-2 py-1.5 text-darcula-text outline-none focus:border-darcula-accent resize-none" rows={2} value={description} onChange={(e) => setDescription(e.target.value)} />
+          <div className="mb-1 text-ide-dim">{t("manifest.description")}</div>
+          <textarea className="ide-input resize-none" rows={2} value={description} onChange={(e) => setDescription(e.target.value)} />
         </div>
         <div>
-          <div className="text-darcula-dim mb-1.5">{t("manifest.permissions")}</div>
+          <div className="mb-1.5 text-ide-dim">{t("manifest.permissions")}</div>
           <div className="space-y-1">
             {ALL_PERMISSIONS.map((perm) => (
-              <label key={perm.id} className="flex items-center gap-2 cursor-pointer hover:text-white">
-                <input type="checkbox" checked={permissions.includes(perm.id)} onChange={() => toggle(perm.id)} className="accent-emerald-500" />
-                <span className="font-mono text-darcula-text">{perm.label}</span>
+              <label key={perm.id} className="flex cursor-pointer items-center gap-2 hover:text-ide-text">
+                <input type="checkbox" checked={permissions.includes(perm.id)} onChange={() => toggle(perm.id)} />
+                <span className="font-mono text-ide-text">{perm.label}</span>
               </label>
             ))}
           </div>
@@ -64,13 +64,11 @@ export default function ManifestPanel() {
         <button
           disabled={!dirty}
           onClick={() => s.updateManifest({ name, app_id: appId, version, description, permissions })}
-          className="w-full flex items-center justify-center gap-2 py-2 rounded bg-darcula-green hover:bg-emerald-600 disabled:opacity-30 text-white font-medium"
+          className="ide-btn ide-btn-primary w-full py-2 font-medium"
         >
           <Save size={13} /> {t("manifest.apply")}
         </button>
-        <div className="text-darcula-dim/70 leading-relaxed">
-          {t("manifest.note")}
-        </div>
+        <div className="leading-relaxed text-ide-dim">{t("manifest.note")}</div>
       </div>
     </div>
   );
