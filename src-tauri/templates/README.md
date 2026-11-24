@@ -13,8 +13,14 @@ npm run dev
 ## Package for QChat
 
 ```sh
+npm install   # required the first time, and after changing package.json
 npm run build
 ```
+
+`npm run build` fails with `vite is not recognized` when dependencies are not
+installed yet, so always run `npm install` first. (QChat Mini App Studio does
+this automatically when you press Build: it installs only when `node_modules/`
+is missing or older than `package.json`.)
 
 This runs `vite build` and then `scripts/package.mjs`, which produces
 `release/{{appId}}-<version>.zip`. Upload that ZIP to the QChat Developer Center

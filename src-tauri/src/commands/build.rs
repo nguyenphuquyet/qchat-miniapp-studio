@@ -384,6 +384,32 @@ pub fn reveal_in_folder(path: String) -> Result<(), String> {
     reveal(p).map_err(|e| e.to_string())
 }
 
+/// Explains why `npm install` has to run before building, or `None` when the
+/// installed dependencies are still usable.
+///
+/// A generated Mini App ships its own `package.json`, so a freshly created
+/// project has no `node_modules` yet and `npm run build` would fail with
+/// "vite is not recognized". Dependencies also go stale when `package.json` or
+/// a lockfile is newer than the installed tree.
+fn install_reason(cwd: &Path) -> Option<String> {
+    let modules = cwd.join("node_modules");
+    if !modules.is_dir() {
+        return Some("node_modules/ is missing".into());
+    }
+    let Ok(installed) = fs::metadata(&modules).and_then(|m| m.modified()) else {
+        return Some("node_modules/ timestamp is unreadable".into());
+    };
+    for name in ["package.json", "package-lock.json", "npm-shrinkwrap.json"] {
+        let Ok(stamp) = fs::metadata(cwd.join(name)).and_then(|m| m.modified()) else {
+            continue;
+        };
+        if stamp > installed {
+            return Some(format!("{name} changed after the last install"));
+        }
+    }
+    None
+}
+
 fn find_release_zip(project_path: &Path) -> Option<String> {
     let release = project_path.join("release");
     let read = fs::read_dir(&release).ok()?;
@@ -415,8 +441,19 @@ pub fn build_project(app: AppHandle, project_path: String) -> Result<(), String>
             );
             return;
         }
-        let needs_install = !cwd.join("node_modules").exists();
-        let ok_install = !needs_install || run_and_stream(&app2, &cwd, &["install"], "npm install");
+        // Dependencies first: a Mini App cannot be built without its own
+        // node_modules (vite, typescript, react...). Installing is skipped only
+        // when the tree exists and is newer than package.json / the lockfiles.
+        let ok_install = match install_reason(&cwd) {
+            Some(reason) => {
+                log(&app2, "info", format!("Dependencies not ready ({reason}) — running npm install first…"));
+                run_and_stream(&app2, &cwd, &["install"], "npm install")
+            }
+            None => {
+                log(&app2, "info", "Dependencies are up to date — skipping npm install.");
+                true
+            }
+        };
         let ok_build = ok_install && run_and_stream(&app2, &cwd, &["run", "build"], "npm run build");
         let zip = if ok_build { find_release_zip(&cwd) } else { None };
         let _ = app2.emit(

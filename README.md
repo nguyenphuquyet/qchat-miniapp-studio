@@ -11,7 +11,7 @@ Viết bằng **TypeScript** (React + Vite + TailwindCSS + Lucide icons + JetBra
 - **Giao diện kiểu VS Code**: title bar gộp menu bar (File/Edit/View/Run/Help) + command center, activity bar, Explorer bên trái, editor tabs + breadcrumb + gutter line numbers, panel dưới (Build/Run/Terminal), secondary sidebar (Manifest/Preview) và status bar xanh (git branch, UTF-8, LF, line:col…). Chuyển theme bằng nút ☀/☾ trên title bar hoặc menu View.
 - **Theme sáng/tối đồng bộ**: toàn bộ màu dùng token CSS (`data-theme="dark" | "light"`) nên title bar, sidebar, editor, panel, dialog và CodeMirror đổi theme cùng lúc; không dùng màu gradient.
 - **Editor**: CodeMirror 6 với theme VS Code sáng/tối, highlight TS/TSX/JS/JSON/HTML/CSS, autocomplete, bracket matching, Ctrl+S save, tab dirty marker.
-- **Build một chạm**: `npm install` → `vite build` → `scripts/package.mjs` tạo ZIP trong `release/`, log stream realtime vào tab Build.
+- **Build một chạm**: studio tự chạy `npm install` cho dự án mini app trước (khi thiếu `node_modules/` hoặc `package.json`/lockfile mới hơn), rồi `vite build` → `scripts/package.mjs` tạo ZIP trong `release/`, log stream realtime vào tab Build. Build thủ công bên ngoài studio thì phải chạy `npm install` trước.
 - **Live Preview**: chạy mini app trong WebView mô phỏng (khung điện thoại 390×844), có inject sẵn **mock `QChatNative` bridge** nên `QChat.showToast`, `getAppInfo`, `getSystemInfo`, `getUserInfo`, `storage`, `chooseImage`, `share`, `request` hoạt động đúng như trên thiết bị.
 - **Manifest panel** bên phải: chỉnh tên/appId/version/permissions và ghi thẳng vào `qchat.manifest.json`.
 - **File tree**: new file / new directory / delete (context menu chuột phải), tự bỏ qua `node_modules`, `dist`, `release`, `.git`.
